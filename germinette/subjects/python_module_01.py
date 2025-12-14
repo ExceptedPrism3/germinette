@@ -1,0 +1,338 @@
+from germinette.core import BaseTester
+from germinette.utils import IOTester
+from rich.console import Console
+from rich.panel import Panel
+import importlib.util
+import sys
+import os
+from typing import Any, List
+
+console = Console()
+
+class Tester(BaseTester):
+    def __init__(self):
+        self.exercises = [
+            ("ft_garden_intro", self.test_garden_intro),
+            ("ft_garden_data", self.test_garden_data),
+            ("ft_plant_growth", self.test_plant_growth),
+            ("ft_plant_factory", self.test_plant_factory),
+            ("ft_garden_security", self.test_garden_security),
+            ("ft_plant_types", self.test_plant_types),
+            ("ft_garden_analytics", self.test_garden_analytics),
+        ]
+        self.grouped_errors = {}
+
+    def record_error(self, exercise_label, error_type, message):
+        """Records an error grouped by exercise label."""
+        if exercise_label not in self.grouped_errors:
+            self.grouped_errors[exercise_label] = []
+        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
+
+    def run(self, exercise_name=None):
+        console.print("[bold blue]Testing Module 01: Garden Object Oriented Programming[/bold blue]")
+        
+        if os.getcwd() not in sys.path:
+            sys.path.insert(0, os.getcwd())
+
+        if exercise_name:
+            found = False
+            for name, func in self.exercises:
+                if name == exercise_name or exercise_name in [name + ".py"]:
+                    func()
+                    found = True
+                    break
+            if not found:
+                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+        else:
+            for _, func in self.exercises:
+                func()
+        
+        if self.grouped_errors:
+            console.print()
+            console.rule("[bold red]Detailed Error Report[/bold red]")
+            console.print()
+            for label, messages in self.grouped_errors.items():
+                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
+                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
+                console.print()
+
+    def _load_module(self, module_name, exercise_label):
+        # Determine base directory: prefer "python_module_01" if it exists in CWD
+        cwd = os.getcwd()
+        if os.path.exists(os.path.join(cwd, "python_module_01")):
+            base_dir = os.path.join(cwd, "python_module_01")
+        else:
+            base_dir = cwd
+
+        # Validate directory existence if exercise number can be parsed
+        expected_dir = None
+        try:
+            # Extract number from "Exercise 7"
+            ex_num = int(exercise_label.split()[-1])
+            expected_dirs = [f"ex{ex_num}"]
+            
+            dir_found = False
+            for d in expected_dirs:
+                if os.path.exists(os.path.join(base_dir, d)):
+                    dir_found = True
+                    expected_dir = os.path.join(base_dir, d)
+                    break
+            
+            if not dir_found:
+                 console.print("[red]KO (Directory Missing)[/red]")
+                 msg = (f"[bold red]Directory not found[/bold red]\n\n"
+                        f"Expected directory: [cyan]{expected_dirs[0]}[/cyan]\n"
+                        f"Location: {base_dir}\n\n"
+                        f"[bold]Please ensure the exercise folder exists and follows strictly 'exXX' naming (e.g., ex7, not ex07).[/bold]")
+                 self.record_error(exercise_label, "Missing Directory", msg)
+                 return None, None
+
+        except ValueError:
+            pass # Could not parse exercise number
+
+        search_paths = [base_dir]
+        if expected_dir:
+            search_paths.append(expected_dir)
+        else:
+             # Fallback to scanning all if parsing failed
+             for i in range(10):
+                ex_path = os.path.join(base_dir, f"ex{i}")
+                if os.path.exists(ex_path):
+                     search_paths.append(ex_path)
+
+        target_file = f"{module_name}.py"
+        found_path = None
+        
+        for path in search_paths:
+            potential = os.path.join(path, target_file)
+            if os.path.exists(potential):
+                found_path = potential
+                break
+        
+        if not found_path:
+             console.print("[red]KO (Missing File)[/red]")
+             msg = (f"[bold red]File not found[/bold red]\n\n"
+                    f"Expected: [cyan]{target_file}[/cyan]\n"
+                    f"Directory: [cyan]{expected_dir if expected_dir else 'scanned directories'}[/cyan]\n\n"
+                    f"[bold]Please ensure the file exists and is named correctly.[/bold]")
+             self.record_error(exercise_label, "Missing File", msg)
+             return None, None
+
+        try:
+            spec = importlib.util.spec_from_file_location(module_name, found_path)
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = mod
+            spec.loader.exec_module(mod)
+            return mod, found_path
+        except Exception as e:
+            console.print("[red]KO (Import Error)[/red]")
+            self.record_error(exercise_label, "Import Error", str(e))
+            return None, None
+
+    def test_garden_intro(self):
+        console.print("\n[bold]Testing Exercise 0: ft_garden_intro[/bold]")
+        label = "Exercise 0"
+        mod, _ = self._load_module("ft_garden_intro", label)
+        if not mod: return
+
+        try:
+            # Must run and print output
+            output = IOTester.run_function(mod.main)
+            required = ["Rose", "25cm", "30 days"]
+            missing = [req for req in required if req.lower() not in output.lower()]
+            
+            if missing:
+                console.print(f"[red]KO[/red]")
+                self.record_error(label, "Output Mismatch", f"Expected to find: {required}\nGot:\n{output}")
+            else:
+                 if label not in self.grouped_errors:
+                    console.print("[green]OK[/green]")
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
+
+    def test_garden_data(self):
+        console.print("\n[bold]Testing Exercise 1: ft_garden_data[/bold]")
+        label = "Exercise 1"
+        mod, _ = self._load_module("ft_garden_data", label)
+        if not mod: return
+
+        try:
+            if not hasattr(mod, 'Plant'):
+                 self.record_error(label, "Missing Class", "Class 'Plant' not found.")
+                 return
+
+            Plant = mod.Plant
+            p = Plant("TestPlant", 10, 5)
+            output = str(p)
+            expected_parts = ["TestPlant", "10cm", "5 days"]
+            
+            if not all(part in output for part in expected_parts):
+                 self.record_error(label, "String Representation Error", f"__str__ expected to contain {expected_parts}, got '{output}'")
+
+            if label not in self.grouped_errors:
+                console.print("[green]OK[/green]")
+            else:
+                console.print("[red]KO[/red]")
+
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
+
+    def test_plant_growth(self):
+        console.print("\n[bold]Testing Exercise 2: ft_plant_growth[/bold]")
+        label = "Exercise 2"
+        mod, _ = self._load_module("ft_plant_growth", label)
+        if not mod: return
+
+        try:
+            Plant = getattr(mod, 'Plant', None)
+            if not Plant:
+                self.record_error(label, "Missing Class", "Class 'Plant' not found")
+                return
+
+            p = Plant("Bamboo", 100, 10)
+            if not hasattr(p, 'grow') or not hasattr(p, 'age_plant'):
+                 self.record_error(label, "Missing Methods", "Missing 'grow' or 'age_plant' methods")
+                 return
+
+            p.grow(50)
+            p.age_plant(5)
+            
+            if p.height != 150 or p.age != 15:
+                 self.record_error(label, "Logic Error", f"Expected height=150, age=15. Got height={p.height}, age={p.age}")
+
+            if label not in self.grouped_errors:
+                console.print("[green]OK[/green]")
+            else:
+                console.print("[red]KO[/red]")
+
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
+
+    def test_plant_factory(self):
+        console.print("\n[bold]Testing Exercise 3: ft_plant_factory[/bold]")
+        label = "Exercise 3"
+        mod, _ = self._load_module("ft_plant_factory", label)
+        if not mod: return
+
+        try:
+            # Capture output of main to ensure it creates plants
+            output = IOTester.run_function(mod.main)
+            if output.count("Created:") < 5:
+                 self.record_error(label, "Output Error", "Expected at least 5 'Created:' confirmations.")
+            
+            if label not in self.grouped_errors:
+                console.print("[green]OK[/green]")
+            else:
+                console.print("[red]KO[/red]")
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
+
+    def test_garden_security(self):
+        console.print("\n[bold]Testing Exercise 4: ft_garden_security[/bold]")
+        label = "Exercise 4"
+        mod, _ = self._load_module("ft_garden_security", label)
+        if not mod: return
+
+        try:
+            SecurePlant = getattr(mod, 'SecurePlant', None)
+            if not SecurePlant:
+                 self.record_error(label, "Missing Class", "Class 'SecurePlant' not found")
+                 return
+            
+            p = SecurePlant("SafePlant", 10, 10)
+            
+            # Test direct access protection (convention)
+            if hasattr(p, 'height') or hasattr(p, 'age'):
+                 self.record_error(label, "Encapsulation Error", "height/age should be protected (use _height/_age)")
+
+            # Test Setters validation
+            p.set_height(-10)
+            if p.get_height() == -10:
+                 self.record_error(label, "Security Error", "set_height accepted negative value")
+            
+            p.set_age(-5)
+            if p.get_age() == -5:
+                 self.record_error(label, "Security Error", "set_age accepted negative value")
+
+            if label not in self.grouped_errors:
+                console.print("[green]OK[/green]")
+            else:
+                console.print("[red]KO[/red]")
+
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
+
+    def test_plant_types(self):
+        console.print("\n[bold]Testing Exercise 5: ft_plant_types[/bold]")
+        label = "Exercise 5"
+        mod, _ = self._load_module("ft_plant_types", label)
+        if not mod: return
+
+        try:
+            required_classes = ['Plant', 'Flower', 'Tree', 'Vegetable']
+            missing = [c for c in required_classes if not hasattr(mod, c)]
+            if missing:
+                self.record_error(label, "Missing Classes", f"Missing: {missing}")
+                return
+
+            Flower = getattr(mod, 'Flower')
+            Tree = getattr(mod, 'Tree')
+            Vegetable = getattr(mod, 'Vegetable')
+            Plant = getattr(mod, 'Plant')
+
+            # Inheritance check
+            if not issubclass(Flower, Plant) or not issubclass(Tree, Plant) or not issubclass(Vegetable, Plant):
+                 self.record_error(label, "Inheritance Error", "Subclasses must inherit from Plant")
+
+            # Method check
+            if not hasattr(Flower, 'bloom') or not hasattr(Tree, 'produce_shade'):
+                 self.record_error(label, "Missing Methods", "Flower needs 'bloom', Tree needs 'produce_shade'")
+
+            if label not in self.grouped_errors:
+                console.print("[green]OK[/green]")
+            else:
+                console.print("[red]KO[/red]")
+
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
+
+    def test_garden_analytics(self):
+        console.print("\n[bold]Testing Exercise 6: ft_garden_analytics[/bold]")
+        label = "Exercise 6"
+        mod, _ = self._load_module("ft_garden_analytics", label)
+        if not mod: return
+
+        try:
+            GardenManager = getattr(mod, 'GardenManager', None)
+            if not GardenManager:
+                self.record_error(label, "Missing Class", "GardenManager not found")
+                return
+
+            # Test static method
+            if not hasattr(GardenManager, 'validate_height'):
+                 self.record_error(label, "Missing Method", "Static method 'validate_height' missing")
+            
+            # Test class attribute usage
+            initial_gardens = GardenManager.total_gardens
+            mgr = GardenManager("TestOwner")
+            if GardenManager.total_gardens <= initial_gardens:
+                 self.record_error(label, "Logic Error", "total_gardens did not increment")
+
+            # Test nested class
+            if not hasattr(mgr, 'stats'):
+                 self.record_error(label, "Structure Error", "GardenManager should have 'stats' instance")
+
+            if label not in self.grouped_errors:
+                console.print("[green]OK[/green]")
+            else:
+                console.print("[red]KO[/red]")
+
+        except Exception as e:
+            console.print("[red]KO[/red]")
+            self.record_error(label, "Execution Error", str(e))
