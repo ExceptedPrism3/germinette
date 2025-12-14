@@ -4,6 +4,8 @@ import argparse
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import GerminetteRunner
+from germinette import __version__
+from germinette.utils import check_update
 
 console = Console()
 
@@ -33,7 +35,15 @@ def main():
         update_germinette()
         return
 
-    console.print(Panel.fit("[bold green]🌱 Germinette[/bold green] - [italic]Python Checker for 42[/italic]"))
+    # Check for updates silently
+    has_update, remote_ver = check_update(__version__)
+    
+    banner_text = f"[bold green]🌱 Germinette[/bold green] [dim]v{__version__}[/dim] - [italic]Python Checker for 42[/italic]"
+    console.print(Panel.fit(banner_text))
+
+    if has_update:
+        console.print(f"\n[bold yellow]🔔 Update Available: v{remote_ver}[/bold yellow]")
+        console.print("[dim]Run 'germinette --update' to get the latest features![/dim]\n")
 
     runner = GerminetteRunner()
     

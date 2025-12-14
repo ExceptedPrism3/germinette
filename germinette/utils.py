@@ -1,6 +1,8 @@
 import sys
 import io
 import contextlib
+import urllib.request
+import re
 from rich.console import Console
 
 console = Console()
@@ -34,16 +36,7 @@ class IOTester:
         capture = io.StringIO()
         
         # Override builtin input and sys.stdout
-        original_stdin = sys.stdin
-        # We can't easily replace builtins.input locally without patching builtins
-        # But we can patch sys.stdin if the function reads from it (it doesn't, it uses input())
-        # The standard way to mock input() is modifying __builtins__ output
-        # BUT this is dangerous/messy.
-        # Better: use unittest.mock or a custom way if possible.
-        # Since we are essentially a test runner, let's use a simpler approach:
-        # We will wrap the execution in a way that checks if they use input().
-        
-        # Actually, let's just patch builtins.input module-wide or use unittest.mock
+        # We generally use unittest.mock.patch for 'builtins.input'
         from unittest.mock import patch
         
         with contextlib.redirect_stdout(capture):
@@ -74,3 +67,31 @@ class IOTester:
         else:
             return False, f"Expected:\n{expected_clean}\n\nGot:\n{actual_clean}"
 
+def check_update(current_version):
+    """
+    Checks if a newer version is available on GitHub.
+    Returns (update_avaiable: bool, remote_version: str).
+    """
+    url = "https://raw.githubusercontent.com/ExceptedPrism3/germinette/main/germinette/__init__.py"
+    try:
+        # Set timeout to 2 seconds to not block startup
+        with urllib.request.urlopen(url, timeout=2) as response:
+            content = response.read().decode('utf-8')
+            
+        # Regex to find __version__ = "1.0.0"
+        match = re.search(r'__version__\s*=\s*"(.*?)"', content)
+        if match:
+            remote_version = match.group(1)
+            # Simple string verify (1.0.1 > 1.0.0 works for semantic versioning usually)
+            # Ideally we'd use packaging.version, but we want to minimize deps or imports.
+            if remote_version != current_version:
+                 # Check if remote is actually 'newer'
+                 # Split by . and compare integers tuple
+                 def parse_v(v): return tuple(map(int, v.split('.')))
+                 
+                 if parse_v(remote_version) > parse_v(current_version):
+                     return True, remote_version
+    except Exception:
+        pass # Fail silently if network/parsing fails
+    
+    return False, None
