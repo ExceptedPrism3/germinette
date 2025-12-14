@@ -3,6 +3,7 @@ from germinette.utils import IOTester
 from rich.console import Console
 from rich.panel import Panel
 import importlib
+import importlib.util
 import sys
 import os
 
@@ -126,7 +127,12 @@ class Tester(BaseTester):
              return None
 
         try:
+            console.print(f"[dim]Debug: Loading {found_path} as {module_name}[/dim]")
             spec = importlib.util.spec_from_file_location(module_name, found_path)
+            if spec is None:
+                console.print("[red]Spec is None![/red]")
+                raise ImportError(f"Could not create spec for {found_path}")
+            
             mod = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = mod
             spec.loader.exec_module(mod)
@@ -139,6 +145,8 @@ class Tester(BaseTester):
             return None
         except AttributeError:
              console.print("[red]KO[/red]")
+             debug_attrs = dir(mod) if 'mod' in locals() else "Module not loaded"
+             console.print(f"[dim]Attributes in module: {debug_attrs}[/dim]")
              self.record_error(exercise_label, "Function Missing", f"Could not find function '{func_name}' in {found_path}")
              return None
         except Exception as e:
