@@ -36,6 +36,17 @@ class ModuleDetector:
                 "ft_garden_management.py", "ex5/ft_garden_management.py"
             ],
             "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4", "ex5"]
+        },
+        "a_maze_ing": {
+            "files": ["a_maze_ing.py", "Makefile"],
+            "dirs": []
+        },
+        "python_module_03": {
+            "files": [
+                "ft_command_quest.py", "ex0/ft_command_quest.py",
+                "ft_score_analytics.py", "ex1/ft_score_analytics.py"
+            ],
+            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4", "ex5", "ex6"]
         }
     }
 
@@ -83,8 +94,11 @@ class GerminetteRunner:
             return
 
         console.print("[bold]Available Modules:[/bold]")
-        for i, mod in enumerate(modules):
-            console.print(f"{i + 1}. {mod}")
+        for i, mod in enumerate(modules, 1):
+             display_name = mod
+             if mod == "python_module_03":
+                 display_name += " [yellow](Coming Soon 🚧)[/yellow]"
+             console.print(f"{i}. {display_name}")
         
         console.print("\n[yellow]Could not auto-detect module in this directory.[/yellow]")
         console.print("Run with: [bold]germinette <module_name>[/bold]")
@@ -96,7 +110,20 @@ class GerminetteRunner:
             tester = getattr(mod, "Tester")()
             tester.run(exercise)
         except ModuleNotFoundError:
-            console.print(f"[red]Module {module_name} not found![/red]")
+            import difflib
+            console.print(f"[bold red]❌ Module '{module_name}' not found![/bold red]")
+            
+            # Smart suggestions
+            available = self.list_modules()
+            matches = difflib.get_close_matches(module_name, available, n=1, cutoff=0.6)
+            
+            if matches:
+                 console.print(f"\n[green]Did you mean [bold]{matches[0]}[/bold]?[/green]")
+            
+            console.print("\n[bold]Available Modules:[/bold]")
+            for m in available:
+                  console.print(f"- {m}")
+
         except AttributeError:
             console.print(f"[red]Module {module_name} is invalid (missing Tester class).[/red]")
         except Exception as e:
