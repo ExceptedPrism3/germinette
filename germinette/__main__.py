@@ -7,12 +7,31 @@ from germinette.core import GerminetteRunner
 
 console = Console()
 
+def update_germinette():
+    """Updates Germinette from the remote repository."""
+    console.print("[bold cyan]🔄 Updating Germinette...[/bold cyan]")
+    try:
+        import subprocess
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "--upgrade", 
+            "git+https://github.com/ExceptedPrism3/germinette.git"
+        ])
+        console.print("[bold green]✅ Germinette updated successfully![/bold green]")
+        console.print("Please restart your terminal or run the command again.")
+    except Exception as e:
+        console.print(f"[bold red]❌ Update failed:[/bold red] {e}")
+
 def main():
     parser = argparse.ArgumentParser(description="Germinette - 42 Python Testing Tool")
     parser.add_argument("module", nargs="?", help="Module to test (e.g., module_00)")
     parser.add_argument("--exercise", "-e", help="Specific exercise to test")
+    parser.add_argument("--update", "-u", action="store_true", help="Update Germinette to the latest version")
     
     args = parser.parse_args()
+
+    if args.update:
+        update_germinette()
+        return
 
     console.print(Panel.fit("[bold green]🌱 Germinette[/bold green] - [italic]Python Checker for 42[/italic]"))
 
