@@ -1,3 +1,8 @@
+-------- 1.0.7 ------
+
+### Improvement
+- **Global Repo Update**: The updater now remembers where you installed Germinette from and updates that git repository regardless of where you run the command from.
+
 -------- 1.0.6 ------
 
 ### Feature

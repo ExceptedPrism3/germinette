@@ -20,6 +20,11 @@ fi
 
 echo -e "${GREEN}✅ Installation successful!${NC}"
 
+# Save repository location for the updater
+REPO_PATH_FILE="$HOME/.germinette_repo_path"
+echo "$PWD" > "$REPO_PATH_FILE"
+echo -e "${BLUE}📍 Registered repository path: $PWD${NC}"
+
 # Path configuration logic
 USER_BIN_DIR="$HOME/.local/bin"
 SHELL_CONFIG=""

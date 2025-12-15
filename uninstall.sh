@@ -19,7 +19,7 @@ else
 fi
 
 # Cleanup build artifacts just in case
-rm -rf build/ dist/ *.egg-info
+rm -rf build/ dist/ *.egg-info "$HOME/.germinette_repo_path"
 
 # Shell Config Cleanup
 SHELL_CONFIG=""

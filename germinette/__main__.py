@@ -11,29 +11,44 @@ from germinette.utils import check_update
 console = Console()
 
 def update_repo():
-    """Updates the local git repository if applicable."""
-    if not os.path.exists(".git"):
+    """Updates the local git repository found in configuration."""
+    repo_path = None
+    config_file = os.path.expanduser("~/.germinette_repo_path")
+    
+    # Try locating repo from config first
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r") as f:
+                path = f.read().strip()
+                if os.path.exists(os.path.join(path, ".git")):
+                    repo_path = path
+        except:
+            pass
+    
+    # Fallback: Check current directory
+    if not repo_path and os.path.exists(".git"):
+         repo_path = os.getcwd()
+
+    if not repo_path:
+        # Silent return if no repo found
         return
 
-    # Check if this is the correct repo (optional safety)
+    console.print(f"\n[bold blue]📂 Detected source repository at: {repo_path}[/bold blue]")
     try:
-        remote = subprocess.check_output(["git", "remote", "get-url", "origin"], text=True).strip()
+        # Check remote for safety
+        remote = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=repo_path, text=True).strip()
         if "germinette" not in remote:
-            return 
-    except:
-        return
-
-    console.print("\n[bold blue]📂 Detected local Git repository. Updating source files...[/bold blue]")
-    try:
-        subprocess.check_call(["git", "pull"])
-        console.print("[bold green]✅ Local repository updated![/bold green]")
+             return 
+             
+        subprocess.check_call(["git", "pull"], cwd=repo_path)
+        console.print("[bold green]✅ Local source Updated source files![/bold green]")
     except subprocess.CalledProcessError:
         console.print("\n[bold red]⚠️  Merge conflict or local changes detected![/bold red]")
         from rich.prompt import Confirm
         if Confirm.ask("Do you want to FORCE update? (This will reset local changes)", default=False):
              console.print("[yellow]Force updating...[/yellow]")
-             subprocess.check_call(["git", "fetch", "--all"])
-             subprocess.check_call(["git", "reset", "--hard", "origin/main"])
+             subprocess.check_call(["git", "fetch", "--all"], cwd=repo_path)
+             subprocess.check_call(["git", "reset", "--hard", "origin/main"], cwd=repo_path)
              console.print("[bold green]✅ Local repository force updated![/bold green]")
         else:
              console.print("[yellow]Skipping local repo update.[/yellow]")
