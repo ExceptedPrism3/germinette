@@ -132,3 +132,20 @@ class GerminetteRunner:
 class BaseTester:
     def run(self, exercise_name=None):
         raise NotImplementedError
+
+    def _run_script(self, path):
+        """Runs a python script and returns stdout."""
+        import subprocess
+        try:
+            result = subprocess.run(
+                [sys.executable, path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            # Return stderr as well for error checking
+            return e.stdout + e.stderr
+        except Exception as e:
+            return str(e)

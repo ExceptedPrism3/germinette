@@ -129,19 +129,7 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Import Error", str(e))
             return None, None
 
-    def _run_script(self, path):
-        """Runs a python script and returns stdout."""
-        import subprocess
-        try:
-            result = subprocess.run(
-                [sys.executable, path],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            return result.stdout
-        except subprocess.CalledProcessError as e:
-            return e.stdout + e.stderr
+
 
     def test_garden_intro(self):
         console.print("\n[bold]Testing Exercise 0: ft_garden_intro[/bold]")

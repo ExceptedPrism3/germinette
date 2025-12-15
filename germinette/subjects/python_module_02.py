@@ -3,11 +3,12 @@ import os
 import importlib.util
 from rich.console import Console
 from rich.panel import Panel
+from germinette.core import BaseTester
 from germinette.utils import IOTester
 
 console = Console()
 
-class Tester:
+class Tester(BaseTester):
     def __init__(self):
         self.exercises = [
             ("ft_first_exception", self.test_first_exception),
@@ -183,18 +184,20 @@ class Tester:
                          self.record_error(exercise_label, "Value Error", f"Input: {inp}\nExpected Return: {expected_ret}\nGot: {ret}")
                          all_ok = False
                 else:
-                    # Expecting None or no return, but maybe printing an error message.
-                    # Verify it didn't crash and handled it.
-                    # Since we can't easily check what they printed inside the function without capturing stdout *while* running it
-                    # (IOTester.run_function does capture stdout).
-                    # We'll rely on it not crashing and potentially returning None or similar.
-                    # The subject says "Handles the case" -> usually means print error and don't crash.
                     console.print(f"[green]OK ({inp} - Handled)[/green]")
                     
             except Exception as e:
                 console.print(f"[red]KO (Crash: {inp})[/red]")
                 self.record_error(exercise_label, "Crash", f"Input: {inp}\nException: {e}")
                 all_ok = False
+
+        # STRICTNESS CHECK: Run as script
+        output = self._run_script(path)
+        if "Testing temperature" not in output or "Error:" not in output:
+             console.print("[red]KO (Script Execution)[/red]")
+             self.record_error(exercise_label, "Script Logic Error", "Running 'python3 ft_first_exception.py' did not produce expected output (Testing..., Error:...). Did you implement the test function?")
+        else:
+             console.print("[green]OK (Script Execution)[/green]")
 
     def test_different_errors(self):
         console.print("\n[bold]Testing Exercise 1: ft_different_errors[/bold]")
@@ -221,6 +224,16 @@ class Tester:
         except Exception as e:
              console.print("[red]KO (Crash)[/red]")
              self.record_error(exercise_label, "Crash", str(e))
+
+        # STRICTNESS CHECK
+        output = self._run_script(path)
+        required = ["ValueError", "ZeroDivisionError", "FileNotFoundError", "KeyError"]
+        missing = [r for r in required if r not in output and r.lower() not in output.lower()]
+        if not missing:
+             console.print("[green]OK (Script Execution)[/green]")
+        else:
+             console.print("[red]KO (Script Execution)[/red]")
+             self.record_error(exercise_label, "Script Output Mismatch", f"Running script failed to verify: {missing}")
 
     def test_custom_errors(self):
         console.print("\n[bold]Testing Exercise 2: ft_custom_errors[/bold]")
@@ -260,6 +273,14 @@ class Tester:
             console.print("[red]KO[/red]")
             self.record_error(exercise_label, "Check Error", str(e))
 
+        # STRICTNESS CHECK
+        output = self._run_script(path)
+        if "PlantError" in output and "WaterError" in output:
+             console.print("[green]OK (Script Execution)[/green]")
+        else:
+             console.print("[red]KO (Script Execution)[/red]")
+             self.record_error(exercise_label, "Script Output Mismatch", "Running script did not show custom error demonstrations.")
+
     def test_finally_block(self):
         console.print("\n[bold]Testing Exercise 3: ft_finally_block[/bold]")
         exercise_label = "Exercise 3"
@@ -289,6 +310,14 @@ class Tester:
         else:
              console.print("[red]KO (Cleanup on error missing)[/red]")
              self.record_error(exercise_label, "Output Error", "Did not find 'Closing watering system' after error")
+
+        # STRICTNESS CHECK
+        output = self._run_script(path)
+        if "Closing watering system" in output:
+             console.print("[green]OK (Script Execution)[/green]")
+        else:
+             console.print("[red]KO (Script Execution)[/red]")
+             self.record_error(exercise_label, "Script Output Mismatch", "Running script did not confirm 'Closing watering system' (finally block usage).")
 
     def test_raise_errors(self):
         console.print("\n[bold]Testing Exercise 4: ft_raise_errors[/bold]")
@@ -323,6 +352,14 @@ class Tester:
                 self.record_error(exercise_label, "Missing Raise", f"Did not raise error for {desc}")
             except Exception:
                 console.print(f"[green]OK ({desc} - Raised)[/green]")
+        
+        # STRICTNESS CHECK
+        output = self._run_script(path)
+        if "Error:" in output or "caught" in output.lower():
+             console.print("[green]OK (Script Execution)[/green]")
+        else:
+             console.print("[red]KO (Script Execution)[/red]")
+             self.record_error(exercise_label, "Script Output Mismatch", "Running script did not show error handling output.")
 
     def test_garden_management(self):
         console.print("\n[bold]Testing Exercise 5: ft_garden_management[/bold]")
@@ -343,3 +380,11 @@ class Tester:
         except Exception as e:
             console.print("[red]KO (Crash)[/red]")
             self.record_error(exercise_label, "Crash", str(e))
+
+        # STRICTNESS CHECK
+        output = self._run_script(path)
+        if "Watering" in output and "Error" in output:
+             console.print("[green]OK (Script Execution)[/green]")
+        else:
+             console.print("[red]KO (Script Execution)[/red]")
+             self.record_error(exercise_label, "Script Output Mismatch", "Running script did not show expected Garden Management flow (Watering, Errors).")
