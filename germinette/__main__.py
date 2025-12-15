@@ -1,6 +1,7 @@
 import sys
 import os
 import argparse
+import subprocess
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import GerminetteRunner
@@ -9,17 +10,49 @@ from germinette.utils import check_update
 
 console = Console()
 
+def update_repo():
+    """Updates the local git repository if applicable."""
+    if not os.path.exists(".git"):
+        return
+
+    # Check if this is the correct repo (optional safety)
+    try:
+        remote = subprocess.check_output(["git", "remote", "get-url", "origin"], text=True).strip()
+        if "germinette" not in remote:
+            return 
+    except:
+        return
+
+    console.print("\n[bold blue]📂 Detected local Git repository. Updating source files...[/bold blue]")
+    try:
+        subprocess.check_call(["git", "pull"])
+        console.print("[bold green]✅ Local repository updated![/bold green]")
+    except subprocess.CalledProcessError:
+        console.print("\n[bold red]⚠️  Merge conflict or local changes detected![/bold red]")
+        from rich.prompt import Confirm
+        if Confirm.ask("Do you want to FORCE update? (This will reset local changes)", default=False):
+             console.print("[yellow]Force updating...[/yellow]")
+             subprocess.check_call(["git", "fetch", "--all"])
+             subprocess.check_call(["git", "reset", "--hard", "origin/main"])
+             console.print("[bold green]✅ Local repository force updated![/bold green]")
+        else:
+             console.print("[yellow]Skipping local repo update.[/yellow]")
+
 def update_germinette():
     """Updates Germinette from the remote repository."""
-    console.print("[bold cyan]🔄 Updating Germinette...[/bold cyan]")
+    console.print("[bold cyan]🔄 Updating Germinette Package...[/bold cyan]")
     try:
         import subprocess
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", "--upgrade", 
             "git+https://github.com/ExceptedPrism3/germinette.git"
         ])
-        console.print("[bold green]✅ Germinette updated successfully![/bold green]")
-        console.print("Please restart your terminal or run the command again.")
+        console.print("[bold green]✅ Germinette package updated successfully![/bold green]")
+        
+        # Update local repo if we are in one
+        update_repo()
+        
+        console.print("\nPlease restart your terminal or run the command again.")
     except Exception as e:
         console.print(f"[bold red]❌ Update failed:[/bold red] {e}")
 

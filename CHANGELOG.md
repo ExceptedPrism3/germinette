@@ -1,3 +1,12 @@
+-------- 1.0.6 ------
+
+### Feature
+- **Smart Repo Update**: `germinette -u` now also updates your local git repository (if you are standing in it).
+- **Force Reset**: If git merge conflicts occur, you can interactively choose to force-reset to match the remote.
+
+### Strictness
+- **Module 02**: Added strict script execution checks (Example output verification) for all exercises.
+
 -------- 1.0.5 ------
 
 ### Fix
