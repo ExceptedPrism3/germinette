@@ -14,6 +14,7 @@ pip install --user .
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Installation failed.${NC}"
+    echo -e "${YELLOW}Please open an issue on GitHub: https://github.com/ExceptedPrism3/germinette/issues${NC}"
     exit 1
 fi
 
@@ -55,3 +56,13 @@ rm -rf build/ dist/ *.egg-info
 echo -e "${GREEN}✨ Cleaned!${NC}"
 
 echo -e "\n${GREEN}🎉 Done! You are ready to plant some code!${NC}"
+
+# Offer to reload shell
+read -p "🔄 Do you want to reload your shell now to apply changes? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}Reloading shell...${NC}"
+    exec "$SHELL"
+else
+    echo -e "${YELLOW}Please run 'source $SHELL_CONFIG' manually or restart your terminal.${NC}"
+fi

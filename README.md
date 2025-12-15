@@ -20,7 +20,7 @@
 
 ## 📦 Installation for 42 Students (Ubuntu/Mac)
 
-Getting `germinette` running is easy, whether you're on a lab machine (Ubuntu) or Mac.
+Getting `germinette` running is easy!
 
 ### 1. Requirements
 - Python 3.10 or higher (Installed by default on 42 machines)
@@ -39,10 +39,34 @@ cd germinette
 
 **That's it!** The script will install Germinette and automatically configure your PATH (so you can run the command from anywhere).
 
-Restart your terminal if prompted, then type:
+If installation fails, please [open an issue on GitHub](https://github.com/ExceptedPrism3/germinette/issues).
+
+### 🔄 Updating
+To update Germinette later, simply run:
+```bash
+germinette --update
+```
+
+## 🗑️ Usage
+
+Navigate to your exercise directory and run:
 ```bash
 germinette
 ```
+
+Or test a specific module/exercise:
+```bash
+germinette python_module_01
+germinette -e "Exercise 2"
+```
+
+## ❌ Uninstalling
+
+To remove Germinette completely:
+```bash
+./uninstall.sh
+```
+This will remove the package and clean up your configuration.
 
 ## 🚀 How to Use
 
