@@ -1,3 +1,8 @@
+-------- 1.0.5 ------
+
+### Fix
+- Fixed infinite update loop in `germinette -u` by ensuring update is only run if a new version is actually available.
+
 -------- 1.0.4 ------
 
 ### Change

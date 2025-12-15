@@ -32,7 +32,14 @@ def main():
     args = parser.parse_args()
 
     if args.update:
-        update_germinette()
+        # Check updates first
+        has_update, remote_ver = check_update(__version__)
+        
+        if has_update:
+            console.print(f"[bold yellow]Found new version: v{remote_ver}[/bold yellow] (Current: v{__version__})")
+            update_germinette()
+        else:
+            console.print(f"[bold green]✅ You are already on the latest version (v{__version__})![/bold green]")
         return
 
     # Check for updates silently
