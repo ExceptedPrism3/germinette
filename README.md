@@ -25,7 +25,7 @@ Getting `germinette` running is easy, whether you're on a lab machine (Ubuntu) o
 ### 1. Requirements
 - Python 3.10 or higher (Installed by default on 42 machines)
 
-### 2. Setup & Install
+### 2. Setup & Install (One Command)
 Open your terminal and run these commands:
 
 ```bash
@@ -33,21 +33,16 @@ Open your terminal and run these commands:
 git clone https://github.com/ExceptedPrism3/germinette.git
 cd germinette
 
-### 2. Installation
-Run this command in the `germinette` folder:
-
-```bash
-pip install --user .
+# 2. Run the install script
+./install.sh
 ```
 
-**That's it!** You can now open a new terminal anywhere and type:
+**That's it!** The script will install Germinette and automatically configure your PATH (so you can run the command from anywhere).
+
+Restart your terminal if prompted, then type:
 ```bash
 germinette
 ```
-
-> ⚠️ **Note**: If it says `command not found`, your local bin folder might not be in your PATH.
-> *   **Mac**: Add `export PATH="$HOME/Library/Python/3.13/bin:$PATH"` to your shell config.
-> *   **Linux/42**: Add `export PATH="$HOME/.local/bin:$PATH"` to your shell config.
 
 ## 🚀 How to Use
 

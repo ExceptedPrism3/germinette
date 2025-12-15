@@ -15,7 +15,6 @@ setup(
     entry_points={
         "console_scripts": [
             "germinette=germinette.__main__:main",
-            "pypaco=germinette.__main__:main",  # Alias just in case
         ],
     },
     install_requires=[
