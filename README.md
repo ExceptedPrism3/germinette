@@ -7,14 +7,17 @@
 ## 🚀 Key Features
 
 - **Auto-Detection**: Automatically identifies which module to test based on your file structure.
-- **Strict Testing**: Runs multiple test cases (standard inputs, edge cases, type checks) to ensure your code is solid.
+- **Strict Testing**: 
+    - **Logic**: Runs multiple test cases (standard inputs, edge cases, type checks).
+    - **Style (New)**: Enforces `flake8` compliance. If style fails, testing stops immediately ("Single KO Policy") to prevent confusion.
+    - **Execution**: Verifies that your scripts run exactly as shown in the subject PDF examples.
 - **Detailed Error Reporting**: 
-    - Real-time "OK/KO" status.
-    - Consolidated, rigorous error reports at the end.
-    - Input context provided for every failure (know *exactly* what input broke your code).
-- **Recursion & Depth Checks**: Detects infinite recursion or stack overflows.
-- **Smart File Search**: Finds your files in the strictly correct module directories (e.g. `ex0`, `ex1`).
+    - **Silent Checks**: Style checks run quietly.
+    - **Final Report**: All errors (logic and style) are consolidated in a detailed report at the end.
+    - **Context**: Input context provided for every failure (know *exactly* what input broke your code).
+- **Global Updater**: `germinette -u` works from anywhere, automatically finding and updating your local Germinette repository.
 - **Rich Output**: Beautiful, color-coded terminal output using the `rich` library.
+- **Recursion & Depth Checks**: Detects infinite recursion or stack overflows.
 
 ---
 
@@ -42,10 +45,11 @@ cd germinette
 If installation fails, please [open an issue on GitHub](https://github.com/ExceptedPrism3/germinette/issues).
 
 ### 🔄 Updating
-To update Germinette later, simply run:
+To update Germinette later, simply run this command from anywhere:
 ```bash
-germinette --update
+germinette -u
 ```
+Germinette now remembers where you installed it, so it will automatically pull the latest changes and reinstall itself.
 
 ## 🗑️ Usage
 
@@ -126,9 +130,7 @@ We welcome contributions! If you want to add support for missing modules, or fix
 3.  Implement the tester following the guide.
 4.  Submit a Pull Request!
 
-## 🛠 Features
-2.  Run strict tests on all available exercises.
-3.  Show you a summary and a detailed error log if anything fails.
+
 
 ---
 
