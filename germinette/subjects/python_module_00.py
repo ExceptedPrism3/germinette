@@ -138,6 +138,15 @@ class Tester(BaseTester):
             spec.loader.exec_module(mod)
             
             func = getattr(mod, func_name)
+            
+            
+            # Check Style
+            style_errors = self.check_flake8(found_path)
+            if style_errors:
+                 console.print("[red]KO[/red]")
+                 self.record_error(exercise_label, "Style Error", style_errors)
+                 return None
+
             return func
         except ImportError as e:
             console.print("[red]KO[/red]")

@@ -105,6 +105,13 @@ class Tester(BaseTester):
             mod = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = mod
             spec.loader.exec_module(mod)
+            # Check Style
+            style_errors = self.check_flake8(found_path)
+            if style_errors:
+                 console.print("[red]KO[/red]")
+                 self.record_error(exercise_label, "Style Error", style_errors)
+                 return None, None
+            
             return mod, found_path
         except Exception as e:
             console.print("[red]KO[/red]")

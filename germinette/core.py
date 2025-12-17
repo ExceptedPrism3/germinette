@@ -2,6 +2,7 @@ import os
 import sys
 import importlib
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 console = Console()
@@ -149,3 +150,34 @@ class BaseTester:
             return e.stdout + e.stderr
         except Exception as e:
             return str(e)
+
+    def check_flake8(self, path):
+        """Runs flake8 and returns None if compliant, or error string if violations found."""
+        import subprocess
+        
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "flake8", path],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                return None
+            else:
+                # Parse and clean output
+                # Output format: file:line:col: code message
+                lines = result.stdout.strip().splitlines()
+                cleaned_lines = []
+                for line in lines:
+                    # Remove file path (keep only line:col: code message)
+                    parts = line.split(':', 1) # Split at first colon (after filename)
+                    if len(parts) > 1:
+                        cleaned_lines.append(f"Line {parts[1].strip()}")
+                    else:
+                        cleaned_lines.append(line)
+                
+                return "\n".join(cleaned_lines)
+
+        except Exception as e:
+            return f"Error running flake8: {e}"

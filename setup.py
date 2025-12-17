@@ -19,6 +19,7 @@ setup(
     },
     install_requires=[
         "rich",  # For pretty output
+        "flake8", # Linter
     ],
     python_requires=">=3.10",
 )

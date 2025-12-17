@@ -1,3 +1,28 @@
+-------- 1.0.12 ------
+
+### Strictness
+- **Single KO Policy**: If `flake8` checks fail, the exercise stops immediately with a single `KO`. Logic tests are skipped to enforce style compliance and avoid confusing "Double KO" outputs.
+
+-------- 1.0.11 ------
+
+### Refinement
+- **Silent Linting**: The "Checking Style..." output has been silenced. Style errors are now ONLY shown in the final "Detailed Error Report", preventing "Double KO" confusion.
+
+-------- 1.0.10 ------
+
+### Improvement
+- **Cleaner Linting**: `flake8` errors are now grouped in the "Detailed Error Report" at the end, and file paths are hidden to reduce noise.
+
+-------- 1.0.9 ------
+
+### Fix
+- **Hotfix**: Fixed `NameError: name 'Panel' is not defined` when reporting linting errors.
+
+-------- 1.0.8 ------
+
+### Feature
+- **Linting Support**: Added automatic `flake8` checking for all exercises in Modules 00, 01, and 02. Violations are reported as "Style Errors".
+
 -------- 1.0.7 ------
 
 ### Improvement
