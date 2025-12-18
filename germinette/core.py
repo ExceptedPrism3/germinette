@@ -104,6 +104,25 @@ class GerminetteRunner:
         console.print("\n[yellow]Could not auto-detect module in this directory.[/yellow]")
         console.print("Run with: [bold]germinette <module_name>[/bold]")
 
+    @staticmethod
+    def cleanup_pycache(root_dir=None):
+        """Recursively removes __pycache__ directories."""
+        if root_dir is None:
+            root_dir = os.getcwd()
+        
+        for dirpath, dirnames, filenames in os.walk(root_dir):
+            if "__pycache__" in dirnames:
+                cache_path = os.path.join(dirpath, "__pycache__")
+                try:
+                    import shutil
+                    shutil.rmtree(cache_path)
+                    # console.print(f"[dim]Cleaned: {cache_path}[/dim]")
+                except Exception as e:
+                    pass
+            # Don't walk into __pycache__ (though we just deleted it)
+            if "__pycache__" in dirnames:
+                dirnames.remove("__pycache__")
+
     def run_module(self, module_name, exercise=None):
         try:
             # Dynamically import the module checker
@@ -150,6 +169,38 @@ class BaseTester:
             return e.stdout + e.stderr
         except Exception as e:
             return str(e)
+
+    def check_docstrings(self, path):
+        """Checks if all classes and functions in the file have docstrings."""
+        import ast
+        
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            
+            missing = []
+            
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+                    # Skip private/dunder methods if desired?
+                    # Subject usually requires EVERYTHING to be documented in strict modules.
+                    # But maybe skip __init__ if class has docstring?
+                    # User request: "methods and all". Implies strictness.
+                    
+                    if not ast.get_docstring(node):
+                        node_type = "Class" if isinstance(node, ast.ClassDef) else "Method"
+                        missing.append(f"Line {node.lineno}: Missing docstring for {node_type} '{node.name}'")
+            
+            if missing:
+                return "\n".join(missing)
+            return None
+            
+        except Exception as e:
+            return f"Error checking docstrings: {e}"
+
+    def run_flake8(self, path):
+        # ... (renaming check_flake8 to consistent naming? No, keep check_flake8)
+        pass
 
     def check_flake8(self, path):
         """Runs flake8 and returns None if compliant, or error string if violations found."""

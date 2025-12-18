@@ -1,3 +1,9 @@
+-------- 1.0.13 ------
+
+### Features
+- **Strict Docstrings**: Module 01 now strictly enforces docstrings on all classes and methods. Missing docstrings result in an immediate `KO`.
+- **Auto-Cleanup**: Germinette now automatically removes `__pycache__` directories after execution to keep your workspace clean.
+
 -------- 1.0.12 ------
 
 ### Strictness

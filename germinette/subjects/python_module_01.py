@@ -123,11 +123,18 @@ class Tester(BaseTester):
             mod = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = mod
             spec.loader.exec_module(mod)
-            # Check Style
+            # Check Style (Flake8)
             style_errors = self.check_flake8(found_path)
             if style_errors:
                  console.print("[red]KO[/red]")
-                 self.record_error(exercise_label, "Style Error", style_errors)
+                 self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
+                 return None, None
+
+            # Check Docstrings (Module 01 Strictness)
+            doc_errors = self.check_docstrings(found_path)
+            if doc_errors:
+                 console.print("[red]KO[/red]")
+                 self.record_error(exercise_label, "Style Error (Missing Docstrings)", doc_errors)
                  return None, None
             
             return mod, found_path

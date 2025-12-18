@@ -102,24 +102,33 @@ def main():
 
     runner = GerminetteRunner()
     
-    if args.module:
-        target_path = args.module
-        module_name = target_path
-
-        # Check if the argument is a path to a directory
-        if os.path.exists(target_path) and os.path.isdir(target_path):
-             # It's a directory path (e.g., "../python_module_00")
-             abs_path = os.path.abspath(target_path)
-             module_name = os.path.basename(abs_path) # Extract "python_module_00"
-             
-             # Change CWD to that directory so the tester finds the files
-             os.chdir(abs_path)
-             console.print(f"[bold blue]Switched working directory to:[/bold blue] {abs_path}")
-        
-        runner.run_module(module_name, args.exercise)
-    else:
-        # interactive mode or auto-detect
-        runner.interactive_menu()
+    try:
+        if args.module:
+            target_path = args.module
+            module_name = target_path
+            module_name_extracted = module_name
+            
+            # Check if the argument is a path to a directory
+            if os.path.exists(target_path):
+                 # It's a directory path (e.g., "../python_module_00")
+                 abs_path = os.path.abspath(target_path)
+                 
+                 # Logic to deduce module name if it's a path
+                 if os.path.isdir(abs_path):
+                     module_name_extracted = os.path.basename(abs_path) 
+                 
+                 # Change CWD to that directory so the tester finds the files
+                 if os.path.isdir(abs_path):
+                     os.chdir(abs_path)
+                     console.print(f"[bold blue]Switched working directory to:[/bold blue] {abs_path}")
+            
+            runner.run_module(module_name_extracted, args.exercise)
+        else:
+            # interactive mode or auto-detect
+            runner.interactive_menu()
+    finally:
+        # Cleanup __pycache__
+        GerminetteRunner.cleanup_pycache()
 
 if __name__ == "__main__":
     main()
