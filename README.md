@@ -11,6 +11,9 @@
     - **Logic**: Runs multiple test cases (standard inputs, edge cases, type checks).
     - **Style (New)**: Enforces `flake8` compliance. If style fails, testing stops immediately ("Single KO Policy") to prevent confusion.
     - **Execution**: Verifies that your scripts run exactly as shown in the subject PDF examples.
+    - **Docstrings**: Enforces docstrings on all classes and methods (Strict policy for Module 01).
+- **Maintenance**:
+    - **Auto-Cleanup**: Automatically wipes `__pycache__` directories after every run to keep your workspace pristine.
 - **Detailed Error Reporting**: 
     - **Silent Checks**: Style checks run quietly.
     - **Final Report**: All errors (logic and style) are consolidated in a detailed report at the end.
