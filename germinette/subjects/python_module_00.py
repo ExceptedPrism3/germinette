@@ -374,11 +374,28 @@ class Tester(BaseTester):
         for args, expected in cases:
             try:
                 out = IOTester.run_function(func, args=args)
-                if expected in out:
-                     console.print(f"[green]OK ({args[0]})[/green]")
+                out_clean = out.strip()
+                expected_clean = expected.strip()
+                is_valid_unit = args[2] in ["packets", "grams", "area"]
+                
+                if out_clean == expected_clean:
+                    console.print(f"[green]OK ({args[0]})[/green]")
                 else:
-                     console.print(f"[red]KO ({args[0]})[/red]")
-                     self.record_error(exercise_label, f"Failed Case ({args[2]})", f"Input: {args}\nExpected: '{expected}'\nGot:\n{out}")
+                    # Check if expected is present but output has extra content
+                    has_expected = expected_clean in out_clean
+                    has_unwanted = "Unknown unit type" in out_clean if is_valid_unit else False
+                    
+                    console.print(f"[red]KO ({args[0]})[/red]")
+                    error_msg = f"Input: {args}\nExpected (exact): '{expected_clean}'\nGot:\n{out_clean}"
+                    
+                    if has_unwanted and is_valid_unit:
+                        error_msg += "\n\n[bold red]Error: 'Unknown unit type' was incorrectly printed for a valid unit![/bold red]"
+                    elif has_expected:
+                        error_msg += "\n\n[bold red]Error: Output contains unexpected additional content.[/bold red]"
+                    else:
+                        error_msg += "\n\n[bold red]Error: Expected string not found in output.[/bold red]"
+                    
+                    self.record_error(exercise_label, f"Failed Case ({args[2]})", error_msg)
             except Exception as e:
                 console.print(f"[red]KO[/red]")
                 self.record_error(exercise_label, "Execution Error", str(e))
