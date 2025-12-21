@@ -1,3 +1,9 @@
+-------- 1.0.17 ------
+
+### Fixes
+- **Mod 02 Ex1**: Fixed tester crash where `garden_operations()` was called without arguments. Now correctly iterates through specific test types.
+- **Edge Cases**: Added robust edge case tests for Module 02 exercises (empty lists, functional checks).
+
 -------- 1.0.16 ------
 
 ### Improvements

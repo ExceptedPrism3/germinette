@@ -224,30 +224,57 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing Function", "garden_operations() not found")
             return
             
-        try:
-             # Just run it to ensure it catches everything and doesn't crash
-             output = IOTester.run_function(mod.garden_operations)
-             required = ["ValueError", "ZeroDivisionError", "FileNotFoundError", "KeyError"]
-             missing = [r for r in required if r not in output and r.lower() not in output.lower()]
-             
-             if not missing:
-                 console.print("[green]OK[/green]")
-             else:
-                 console.print("[red]KO[/red]")
-                 self.record_error(exercise_label, "Output Mismatch", f"Output missing handling for: {missing}\n\nOutput:\n{output}")
-        except Exception as e:
-             console.print("[red]KO (Crash)[/red]")
-             self.record_error(exercise_label, "Crash", str(e))
+        # Test specific error cases
+        cases = [
+            ("value", "ValueError"),
+            ("zero", "ZeroDivisionError"),
+            ("file", "FileNotFoundError"),
+            ("key", "KeyError")
+        ]
+        
+        all_passed = True
+        
+        for arg, expected_error in cases:
+            try:
+                 output = IOTester.run_function(mod.garden_operations, args=(arg,))
+                 if expected_error in output or f"Caught {expected_error}" in output:
+                     console.print(f"[green]OK ({arg})[/green]")
+                 else:
+                     console.print(f"[red]KO ({arg})[/red]")
+                     self.record_error(exercise_label, "Output Mismatch", f"Arg: '{arg}'\nExpected output containing: {expected_error}\nGot:\n{output}")
+                     all_passed = False
+            except TypeError as e:
+                 console.print(f"[red]KO (Signature Error)[/red]")
+                 self.record_error(exercise_label, "Signature Error", f"Function signature incorrect. Expected to accept arguments.\nError: {e}")
+                 all_passed = False
+                 break
+            except Exception as e:
+                 console.print(f"[red]KO (Crash: {arg})[/red]")
+                 self.record_error(exercise_label, "Crash", f"Arg: '{arg}'\nException: {e}")
+                 all_passed = False
 
-        # STRICTNESS CHECK
+        # Edge Case: Unknown argument
+        try:
+            output = IOTester.run_function(mod.garden_operations, args=("unknown",))
+            # Should not crash. Output might be empty or generic.
+            console.print("[green]OK (Edge Case: Unknown Arg)[/green]")
+        except Exception as e:
+            console.print("[red]KO (Edge Case: Unknown Arg)[/red]")
+            self.record_error(exercise_label, "Crash", f"Arg: 'unknown'\nException: {e}")
+            all_passed = False
+
+        # STRICTNESS CHECK: Script execution
+        # The script usually runs a demo of all cases.
         output = self._run_script(path)
         required = ["ValueError", "ZeroDivisionError", "FileNotFoundError", "KeyError"]
         missing = [r for r in required if r not in output and r.lower() not in output.lower()]
+        
         if not missing:
              console.print("[green]OK (Script Execution)[/green]")
         else:
              console.print("[red]KO (Script Execution)[/red]")
              self.record_error(exercise_label, "Script Output Mismatch", f"Running script failed to verify: {missing}")
+
 
     def test_custom_errors(self):
         console.print("\n[bold]Testing Exercise 2: ft_custom_errors[/bold]")
@@ -325,6 +352,14 @@ class Tester(BaseTester):
              console.print("[red]KO (Cleanup on error missing)[/red]")
              self.record_error(exercise_label, "Output Error", "Did not find 'Closing watering system' after error")
 
+        # Edge Case: Empty list
+        output_empty = IOTester.run_function(mod.water_plants, args=([],))
+        if "Closing watering system" in output_empty:
+             console.print("[green]OK (Edge Case: Empty List)[/green]")
+        else:
+             console.print("[red]KO (Edge Case: Empty List)[/red]")
+             self.record_error(exercise_label, "Output Error", "Did not find 'Closing watering system' for empty list")
+
         # STRICTNESS CHECK
         output = self._run_script(path)
         if "Closing watering system" in output:
@@ -391,6 +426,24 @@ class Tester(BaseTester):
                  console.print("[green]OK (Class Structure)[/green]")
             else:
                  console.print("[red]KO (Missing Methods)[/red]")
+                 return
+
+            # Functional Check: Add Plant (Valid)
+            IOTester.run_function(gm.add_plant, args=("test_plant",))
+            if "test_plant" in gm.plants:
+                console.print("[green]OK (Functional: Add Plant)[/green]")
+            else:
+                console.print("[red]KO (Functional: Add Plant)[/red]")
+                self.record_error(exercise_label, "Logic Error", "add_plant did not add to self.plants")
+
+            # Functional Check: Use finally
+            out_water = IOTester.run_function(gm.water_plants)
+            if "Closing" in out_water:
+                console.print("[green]OK (Functional: Water Plants)[/green]")
+            else:
+                console.print("[red]KO (Functional: Water Plants)[/red]")
+                self.record_error(exercise_label, "Logic Error", "water_plants missing 'Closing' message")
+
         except Exception as e:
             console.print("[red]KO (Crash)[/red]")
             self.record_error(exercise_label, "Crash", str(e))
