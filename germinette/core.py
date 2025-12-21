@@ -171,7 +171,7 @@ class BaseTester:
             return str(e)
 
     def check_docstrings(self, path):
-        """Checks if all classes and functions in the file have docstrings."""
+        """Checks if the module itself and all classes/functions have docstrings."""
         import ast
         
         try:
@@ -180,13 +180,13 @@ class BaseTester:
             
             missing = []
             
+            # Check Module-level Docstring (Top of file)
+            if not ast.get_docstring(tree):
+                 missing.append(f"Line 1: Missing module-level docstring (top of file)")
+
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
-                    # Skip private/dunder methods if desired?
-                    # Subject usually requires EVERYTHING to be documented in strict modules.
-                    # But maybe skip __init__ if class has docstring?
-                    # User request: "methods and all". Implies strictness.
-                    
+                    # Strictly check everything
                     if not ast.get_docstring(node):
                         node_type = "Class" if isinstance(node, ast.ClassDef) else "Method"
                         missing.append(f"Line {node.lineno}: Missing docstring for {node_type} '{node.name}'")

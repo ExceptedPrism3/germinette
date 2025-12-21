@@ -1,3 +1,13 @@
+-------- 1.0.16 ------
+
+### Improvements
+- **Stricter Docstrings**: Now enforces module-level docstrings at the top of every file in strict modules (Mod 01 & Mod 02). Scripts without functions/classes are no longer exempt.
+
+-------- 1.0.15 ------
+
+### Improvements
+- **Strict Module 02**: Now enforces docstrings on all classes and methods for Module 02, matching the strictness of Module 01.
+
 -------- 1.0.14 ------
 
 ### Improvements
