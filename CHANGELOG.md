@@ -1,3 +1,8 @@
+-------- 1.0.14 ------
+
+### Improvements
+- **Strict Module 00**: Improved `test_seed_inventory` to detect cases where students print error messages alongside valid output (thanks @eloi-berlinger).
+
 -------- 1.0.13 ------
 
 ### Features
