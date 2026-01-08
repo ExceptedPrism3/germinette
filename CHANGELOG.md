@@ -1,3 +1,10 @@
+-------- 1.1.0 ------
+
+### Features
+- **Module 03 Support**: Full support for "Data Quest" (Ex0-Ex6).
+    - Checks `sys.argv`, Lists, Tuples, Sets, Dicts, Generators, and Comprehensions.
+    - Validates strict output headers and logic as per the subject.
+
 -------- 1.0.18 ------
 
 ### Improvements
