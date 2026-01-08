@@ -224,6 +224,11 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing Function", "garden_operations() not found")
             return
             
+        if not hasattr(mod, "test_error_types"):
+             console.print("[red]KO (Missing Test Function)[/red]")
+             self.record_error(exercise_label, "Structure Error", "Missing mandatory function 'test_error_types()'")
+             return
+
         # Test specific error cases
         cases = [
             ("value", "ValueError"),
@@ -269,7 +274,10 @@ class Tester(BaseTester):
         required = ["ValueError", "ZeroDivisionError", "FileNotFoundError", "KeyError"]
         missing = [r for r in required if r not in output and r.lower() not in output.lower()]
         
-        if not missing:
+        if "=== Garden Error Types Demo ===" not in output:
+             console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Error Types Demo ==='")
+        elif not missing:
              console.print("[green]OK (Script Execution)[/green]")
         else:
              console.print("[red]KO (Script Execution)[/red]")
@@ -289,6 +297,11 @@ class Tester(BaseTester):
                 console.print(f"[red]KO ({c} missing)[/red]")
                 self.record_error(exercise_label, "Missing Class", f"{c} is missing")
                 return
+
+        if not hasattr(mod, "test_custom_errors"):
+             console.print("[red]KO (Missing Test Function)[/red]")
+             self.record_error(exercise_label, "Structure Error", "Missing mandatory function 'test_custom_errors()'")
+             return
 
         try:
             # Check inheritance
@@ -316,7 +329,10 @@ class Tester(BaseTester):
 
         # STRICTNESS CHECK
         output = self._run_script(path)
-        if "PlantError" in output and "WaterError" in output:
+        if "=== Custom Garden Errors Demo ===" not in output:
+             console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing header: '=== Custom Garden Errors Demo ==='")
+        elif "PlantError" in output and "WaterError" in output:
              console.print("[green]OK (Script Execution)[/green]")
         else:
              console.print("[red]KO (Script Execution)[/red]")
@@ -330,7 +346,12 @@ class Tester(BaseTester):
         
         if not hasattr(mod, "water_plants"):
              self.record_error(exercise_label, "Missing Function", "water_plants not found")
-             console.print("[red]KO[/red]")
+             console.print("[red]KO (Missing water_plants)[/red]")
+             return
+        
+        if not hasattr(mod, "test_watering_system"):
+             self.record_error(exercise_label, "Missing Test Function", "test_watering_system() not found")
+             console.print("[red]KO (Missing Test Function)[/red]")
              return
              
         # Check if 'finally' ensures cleanup
@@ -362,7 +383,10 @@ class Tester(BaseTester):
 
         # STRICTNESS CHECK
         output = self._run_script(path)
-        if "Closing watering system" in output:
+        if "=== Garden Watering System ===" not in output:
+             console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Watering System ==='")
+        elif "Closing watering system" in output:
              console.print("[green]OK (Script Execution)[/green]")
         else:
              console.print("[red]KO (Script Execution)[/red]")
@@ -399,12 +423,24 @@ class Tester(BaseTester):
                 func(name, water, sun)
                 console.print(f"[red]KO ({desc} - No Raise)[/red]")
                 self.record_error(exercise_label, "Missing Raise", f"Did not raise error for {desc}")
-            except Exception:
-                console.print(f"[green]OK ({desc} - Raised)[/green]")
+            except ValueError:
+                console.print(f"[green]OK ({desc} - Raised ValueError)[/green]")
+            except Exception as e:
+                console.print(f"[red]KO ({desc} - Wrong Error Type)[/red]")
+                self.record_error(exercise_label, "Wrong Error", f"Expected ValueError, got {type(e).__name__}")
         
         # STRICTNESS CHECK
+        # Must verify test function exists
+        if not hasattr(mod, "test_plant_checks"):
+             console.print("[red]KO (Missing Test Function)[/red]")
+             self.record_error(exercise_label, "Structure Error", "Missing mandatory function 'test_plant_checks()'")
+             return
+
         output = self._run_script(path)
-        if "Error:" in output or "caught" in output.lower():
+        if "=== Garden Plant Health Checker ===" not in output:
+             console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Plant Health Checker ==='")
+        elif "Error:" in output or "caught" in output.lower() or "Unexpected" in output:
              console.print("[green]OK (Script Execution)[/green]")
         else:
              console.print("[red]KO (Script Execution)[/red]")
@@ -449,8 +485,16 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Crash", str(e))
 
         # STRICTNESS CHECK
+        if not hasattr(mod, "test_garden_management"):
+             console.print("[red]KO (Missing Test Function)[/red]")
+             self.record_error(exercise_label, "Structure Error", "Missing mandatory function 'test_garden_management()'")
+             return
+
         output = self._run_script(path)
-        if "Watering" in output and "Error" in output:
+        if "=== Garden Management System ===" not in output:
+             console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Management System ==='")
+        elif "Watering" in output and "Error" in output:
              console.print("[green]OK (Script Execution)[/green]")
         else:
              console.print("[red]KO (Script Execution)[/red]")

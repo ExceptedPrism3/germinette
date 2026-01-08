@@ -1,3 +1,9 @@
+-------- 1.0.18 ------
+
+### Improvements
+- **Strict PDF Alignment (Mod 02)**: Now enforces mandatory test function names (e.g., `test_error_types`) and specific output headers (e.g., `=== Garden Error Types Demo ===`) as per the official correction sheet.
+- **Strict ValueError**: Ex4 now requires `ValueError` to be raised, not just any exception.
+
 -------- 1.0.17 ------
 
 ### Fixes
