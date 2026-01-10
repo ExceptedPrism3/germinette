@@ -264,9 +264,10 @@ class Tester(BaseTester):
         if not path: return
 
         try:
-            # Use script execution instead of main()
+            if mod and not hasattr(mod, 'Plant'):
+                self.record_error(label, "Missing Class", "Class 'Plant' not found in module")
+            
             output = self._run_script(path)
-            # Relaxed check: Look for keywords indicating success
             if len(output.splitlines()) < 2:
                  self.record_error(label, "Output Error", "Output too short.")
             
