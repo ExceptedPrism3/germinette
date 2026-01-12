@@ -250,7 +250,7 @@ class Tester(BaseTester):
                  # If successful, check if we should print OK
                  if label not in self.grouped_errors:
                      console.print("[green]OK[/green]")
-             except:
+             except Exception:
                  self.record_error(label, "Method Signature", "grow() failed with 0 and 1 args.")
                  console.print("[red]KO[/red]")
         except Exception as e:
