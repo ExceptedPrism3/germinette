@@ -12,8 +12,8 @@ console = Console()
 class Tester(BaseTester):
     def __init__(self):
         self.exercises = [
-            ("ft_archive_extraction", self.test_archive_extraction),
-            ("ft_archive_preservation", self.test_archive_preservation),
+            ("ft_ancient_text", self.test_archive_extraction),
+            ("ft_archive_creation", self.test_archive_preservation),
             ("ft_stream_management", self.test_stream_management),
             ("ft_vault_security", self.test_vault_security),
             ("ft_crisis_response", self.test_crisis_response),
@@ -55,7 +55,9 @@ class Tester(BaseTester):
 
         ex_map = {
             "ft_archive_extraction": 0,
+            "ft_ancient_text": 0,
             "ft_archive_preservation": 1,
+            "ft_archive_creation": 1,
             "ft_stream_management": 2,
             "ft_vault_security": 3,
             "ft_crisis_response": 4
@@ -141,9 +143,9 @@ class Tester(BaseTester):
     # --- Exercise Tests ---
 
     def test_archive_extraction(self):
-        console.print("\n[bold]Testing Exercise 0: ft_archive_extraction[/bold]")
+        console.print("\n[bold]Testing Exercise 0: ft_ancient_text[/bold]")
         exercise_label = "Exercise 0"
-        status, path = self._load_module("ft_archive_extraction", exercise_label)
+        status, path = self._load_module("ft_ancient_text", exercise_label)
         if not status: return
 
         import subprocess
@@ -166,9 +168,9 @@ class Tester(BaseTester):
              console.print(f"[red]KO (Execution Error: {e})[/red]")
 
     def test_archive_preservation(self):
-        console.print("\n[bold]Testing Exercise 1: ft_archive_preservation[/bold]")
+        console.print("\n[bold]Testing Exercise 1: ft_archive_creation[/bold]")
         exercise_label = "Exercise 1"
-        status, path = self._load_module("ft_archive_preservation", exercise_label)
+        status, path = self._load_module("ft_archive_creation", exercise_label)
         if not status: return
 
         # Ensure target file doesn't exist

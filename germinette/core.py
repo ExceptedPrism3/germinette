@@ -51,7 +51,8 @@ class ModuleDetector:
         },
         "python_module_04": {
             "files": [
-                "ft_archive_extraction.py", "ex0/ft_archive_extraction.py"
+                "ft_ancient_text.py", "ex0/ft_ancient_text.py",
+                "ft_archive_creation.py", "ex1/ft_archive_creation.py"
             ],
             "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
         }
