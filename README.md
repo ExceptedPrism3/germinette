@@ -22,6 +22,15 @@
 - **Rich Output**: Beautiful, color-coded terminal output using the `rich` library.
 - **Recursion & Depth Checks**: Detects infinite recursion or stack overflows.
 
+## ✅ Supported Modules
+
+| Module | Status | Features |
+| :--- | :--- | :--- |
+| **Module 00** | 🟢 Ready | Basic Python, Functions, I/O |
+| **Module 01** | 🟢 Ready | Classes, Objects, Strict Docstrings |
+| **Module 02** | 🟢 Ready | Error Handling, Custom Exceptions |
+| **Module 03** | 🟢 Ready | `sys.argv`, Data Structures, Generators |
+
 ---
 
 ## 📦 Installation for 42 Students (Ubuntu/Mac)
