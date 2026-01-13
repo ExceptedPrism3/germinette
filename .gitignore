@@ -39,3 +39,10 @@ tmp/
 *.swo
 .DS_Store
 devtools/
+
+# Sensitive / Large Files
+extract_pdf.py
+*.pdf
+*.tar
+devtools/module_*_full.txt
+devtools/temp_mod04/
