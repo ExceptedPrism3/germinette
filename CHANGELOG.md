@@ -1,3 +1,11 @@
+-------- 1.2.0 ------
+
+### Features
+- **Module 04 Support**: Full support for "Data Archivist" (Ex0-Ex4).
+    - **Exercises**: Covers File Extraction, Preservation, Stream Management (`stdin/stdout/stderr`), Vault Security (`with`), and Crisis Response (`try/except`).
+    - **Internal Data**: Automatically generates required test files (`ancient_fragment.txt`, etc.) before testing.
+    - **Strictness**: Enforces specific header outputs and AST checks for `with` and `try/except`.
+
 -------- 1.1.0 ------
 
 ### Features

@@ -48,6 +48,12 @@ class ModuleDetector:
                 "ft_score_analytics.py", "ex1/ft_score_analytics.py"
             ],
             "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4", "ex5", "ex6"]
+        },
+        "python_module_04": {
+            "files": [
+                "ft_archive_extraction.py", "ex0/ft_archive_extraction.py"
+            ],
+            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
         }
     }
 
