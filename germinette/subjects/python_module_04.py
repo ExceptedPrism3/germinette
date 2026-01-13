@@ -258,7 +258,7 @@ class Tester(BaseTester):
                 console.print("[red]KO (Missing 'with')[/red]")
                 self.record_error(exercise_label, "Structure Error", "Must use 'with' statement for file operations.")
                 return
-        except:
+        except Exception:
             pass
 
         # Runtime Check

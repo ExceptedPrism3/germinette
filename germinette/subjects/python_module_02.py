@@ -408,7 +408,7 @@ class Tester(BaseTester):
         try:
             func("rose", 5, 5)
             console.print("[green]OK (Valid)[/green]")
-        except:
+        except Exception:
              console.print("[red]KO (Valid raised error)[/red]")
              
         # Test raises

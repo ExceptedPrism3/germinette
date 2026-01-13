@@ -247,7 +247,7 @@ class Tester(BaseTester):
              # Retry grow with argument if first failed?
              try:
                  p.grow(10) # Maybe it needs arg?
-             except:
+             except Exception:
                  self.record_error(label, "Method Signature", "grow() failed with 0 and 1 args.")
         except Exception as e:
             console.print("[red]KO[/red]")

@@ -22,8 +22,8 @@ def update_repo():
                 path = f.read().strip()
                 if os.path.exists(os.path.join(path, ".git")):
                     repo_path = path
-        except:
-            pass
+        except Exception:
+            return None
     
     # Fallback: Check current directory
     if not repo_path and os.path.exists(".git"):
