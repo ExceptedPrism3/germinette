@@ -1,4 +1,6 @@
--------- 1.2.1 ------
+-------- 1.2.2 ------
+- **Roadmap Update**: Added placeholders for Modules 05-09 (Coming Soon).
+
 
 ### Features
 - **Module 04 Support**: Full support for "Data Archivist" (Ex0-Ex4).
