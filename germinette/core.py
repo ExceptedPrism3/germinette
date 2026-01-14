@@ -105,7 +105,6 @@ class GerminetteRunner:
         for i, mod in enumerate(modules, 1):
              display_name = mod
              coming_soon = [
-                 "python_module_03",
                  "python_module_05", "python_module_06", "python_module_07", 
                  "python_module_08", "python_module_09"
              ]

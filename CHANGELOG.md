@@ -1,5 +1,6 @@
--------- 1.2.2 ------
-- **Roadmap Update**: Added placeholders for Modules 05-09 (Coming Soon).
+-------- 1.2.3 ------
+- **Release**: Module 03 ("Data Quest") is now officially released! 🎉
+- **Roadmap**: Modules 05-09 marked as Coming Soon.
 
 
 ### Features
