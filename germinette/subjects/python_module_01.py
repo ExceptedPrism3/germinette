@@ -244,7 +244,7 @@ class Tester(BaseTester):
                 console.print("[green]OK[/green]")
 
         except TypeError:
-             # Retry grow with argument if first failed?
+             # Retry grow with argument if first failed? (Thanks @eloiberlinger1)
              try:
                  p.grow(10) # Maybe it needs arg?
                  # If successful, check if we should print OK
