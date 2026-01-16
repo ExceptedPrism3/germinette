@@ -1,6 +1,5 @@
 import sys
 import os
-import re
 import importlib.util
 from rich.console import Console
 from rich.panel import Panel
@@ -85,6 +84,13 @@ class Tester(BaseTester):
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Style Error (Missing Docstrings)", doc_errors)
              return None, None
+        
+        # Type Hints
+        type_hint_errors = self.check_type_hints(found_path)
+        if type_hint_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(exercise_label, "Style Error (Missing Type Hints)", type_hint_errors)
+             return None, None
             
         return "FOUND", found_path 
 
@@ -134,25 +140,11 @@ class Tester(BaseTester):
 
         # Test Case 2: Args
         out2 = self._run_script_args(path, ["hello", "world", "42"])
-        expected_count = 3
-        # Count how many "Argument X:" patterns appear in the output
-        argument_lines = re.findall(r'Argument\s+\d+:', out2, re.IGNORECASE)
-        found_count = len(argument_lines)
-        
-        # Check for the expected number in the output with REGEX
-        number_patterns = [
-            r':\s*' + str(expected_count) + r'(?:\s|$|\n)',  # ": 3" or ": 3\n"
-            r'=\s*' + str(expected_count) + r'(?:\s|$|\n)',  # "= 3"
-            r'is\s+' + str(expected_count) + r'(?:\s|$|\n)',  # "is 3"
-            r'^\s*' + str(expected_count) + r'\s*$',  # standalone on a line
-        ]
-        number_found = any(re.search(pattern, out2, re.MULTILINE) for pattern in number_patterns)
-        
-        if found_count == expected_count or number_found:
+        if "Arguments received: 3" in out2 and "Argument 1: hello" in out2:
             console.print("[green]OK (With Args)[/green]")
         else:
             console.print("[red]KO (With Args)[/red]")
-            self.record_error(exercise_label, "Output Error", f"Expected {expected_count} arguments detected. Got:\n{out2}")
+            self.record_error(exercise_label, "Output Error", f"Expected argument details. Got:\n{out2}")
 
     def test_score_analytics(self):
         console.print("\n[bold]Testing Exercise 1: ft_score_analytics[/bold]")
