@@ -119,7 +119,7 @@ class Tester(BaseTester):
                  self.record_error(exercise_label, "Style Error (Missing Docstrings)", doc_errors)
                  return None, None
             
-            # Check Type Hints (Module 02 Strictness)
+            # Check Type Hints (Mandatory in module 2)
             type_hint_errors = self.check_type_hints(found_path)
             if type_hint_errors:
                  console.print("[red]KO[/red]")

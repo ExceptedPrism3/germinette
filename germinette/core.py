@@ -255,9 +255,7 @@ class BaseTester:
             missing = []
             
             for node in ast.walk(tree):
-                # Check functions and methods (but skip __init__ if it only has self)
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    # Skip private methods that start with __ (except __init__)
                     if node.name.startswith("__") and node.name != "__init__":
                         continue
                     
