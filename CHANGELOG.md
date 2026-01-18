@@ -1,4 +1,6 @@
--------- 1.2.3 ------
+-------- 1.2.4 ------
+- **Module 00 Update**: Updated requirements based on v17 PDF (stricter Ex5 output, strict signatures for Ex7).
+- **Fix**: Corrected devtools solution for Ex6.
 - **Release**: Module 03 ("Data Quest") is now officially released! 🎉
 - **Roadmap**: Modules 05-09 marked as Coming Soon.
 

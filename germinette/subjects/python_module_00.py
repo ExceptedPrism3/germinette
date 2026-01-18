@@ -8,6 +8,7 @@ import sys
 import os
 
 console = Console()
+import inspect
 
 class Tester(BaseTester):
     def __init__(self):
@@ -241,9 +242,9 @@ class Tester(BaseTester):
         cases = [
             ("75", "Plant is ready to harvest!"),
             ("100", "Plant is ready to harvest!"),
-            ("45", "Plant needs more time to grow"),
-            ("12", "Plant needs more time to grow"),
-            ("0", "Plant needs more time to grow")
+            ("45", "Plant needs more time to grow."),
+            ("12", "Plant needs more time to grow."),
+            ("0", "Plant needs more time to grow.")
         ]
 
         for inp, expected in cases:
@@ -289,38 +290,50 @@ class Tester(BaseTester):
         
         func1 = self._load_func("ft_count_harvest_iterative", exercise_label)
         if func1:
-            cases = [
-                ("3", ["Day 1", "Day 3", "Harvest time!"]),
-                ("1", ["Day 1", "Harvest time!"]),
-                ("0", ["Harvest time!"])
-            ]
-            for inp, must_have in cases:
+            cases = ["3", "1", "0", "5"]
+            for inp in cases:
                 try:
                     out = IOTester.run_function(func1, inputs=[inp])
-                    if all(x in out for x in must_have):
+                    # Build expected strict output
+                    n = int(inp)
+                    expected_lines = [f"Day {d}" for d in range(1, n + 1)]
+                    expected_lines.append("Harvest time!")
+                    
+                    # Verify each line is present
+                    missing = []
+                    for line in expected_lines:
+                        if line not in out:
+                            missing.append(line)
+                    
+                    if not missing:
                         console.print(f"[green]Iterative OK ({inp} days)[/green]")
                     else:
                         console.print(f"[red]Iterative KO ({inp} days)[/red]")
-                        self.record_error(exercise_label, f"Iterative Failed (Input: {inp})", f"Expected: {must_have}\nGot:\n{out}")
+                        self.record_error(exercise_label, f"Iterative Failed (Input: {inp})", f"Missing lines: {missing}\nGot:\n{out}")
                 except Exception as e:
                      console.print(f"[red]Iterative KO[/red]")
                      self.record_error(exercise_label, f"Iterative Error (Input: {inp})", str(e))
 
         func2 = self._load_func("ft_count_harvest_recursive", exercise_label)
         if func2:
-            cases = [
-                ("3", ["Day 1", "Day 3", "Harvest time!"]),
-                ("1", ["Day 1", "Harvest time!"]),
-                ("0", ["Harvest time!"])
-            ]
-            for inp, must_have in cases:
+            cases = ["3", "1", "0", "4"]
+            for inp in cases:
                 try:
                     out = IOTester.run_function(func2, inputs=[inp])
-                    if all(x in out for x in must_have):
+                    n = int(inp)
+                    expected_lines = [f"Day {d}" for d in range(1, n + 1)]
+                    expected_lines.append("Harvest time!")
+                    
+                    missing = []
+                    for line in expected_lines:
+                        if line not in out:
+                            missing.append(line)
+                            
+                    if not missing:
                         console.print(f"[green]Recursive OK ({inp} days)[/green]")
                     else:
                         console.print(f"[red]Recursive KO ({inp} days)[/red]")
-                        self.record_error(exercise_label, f"Recursive Failed (Input: {inp})", f"Expected: {must_have}\nGot:\n{out}")
+                        self.record_error(exercise_label, f"Recursive Failed (Input: {inp})", f"Missing lines: {missing}\nGot:\n{out}")
                 except Exception as e:
                      console.print(f"[red]Recursive KO[/red]")
                      self.record_error(exercise_label, f"Recursive Error (Input: {inp})", str(e))
@@ -359,7 +372,45 @@ class Tester(BaseTester):
         exercise_label = "Exercise 7"
         func = self._load_func("ft_seed_inventory", exercise_label)
         if not func: return
-        
+
+        # Check Signature (Strict Type Hints)
+        try:
+            sig = inspect.signature(func)
+            params = list(sig.parameters.items())
+            
+            # Expected: (seed_type: str, quantity: int, unit: str) -> None
+            if len(params) != 3:
+                console.print(f"[red]KO (Signature Mismatch)[/red]")
+                self.record_error(exercise_label, "Signature Error", f"Expected 3 parameters, got {len(params)}.")
+                return
+
+            p1_name, p1 = params[0]
+            p2_name, p2 = params[1]
+            p3_name, p3 = params[2]
+
+            if p1.annotation != str:
+                console.print(f"[red]KO (Type Hint Error)[/red]")
+                self.record_error(exercise_label, "Type Hint Error", f"Parameter '{p1_name}': Expected str, got {p1.annotation}")
+                return
+            if p2.annotation != int:
+                console.print(f"[red]KO (Type Hint Error)[/red]")
+                self.record_error(exercise_label, "Type Hint Error", f"Parameter '{p2_name}': Expected int, got {p2.annotation}")
+                return
+            if p3.annotation != str:
+                console.print(f"[red]KO (Type Hint Error)[/red]")
+                self.record_error(exercise_label, "Type Hint Error", f"Parameter '{p3_name}': Expected str, got {p3.annotation}")
+                return
+            
+            if sig.return_annotation is not None and sig.return_annotation != None: # 'None' type
+                # in python 3.10 match NoneType or strict None.
+                # Just check string repr or strict.
+                pass 
+
+        except Exception as e:
+             console.print(f"[red]KO (Signature Check Failed)[/red]")
+             self.record_error(exercise_label, "Signature Check Error", str(e))
+             return
+
         cases = [
             (("tomato", 15, "packets"), "Tomato seeds: 15 packets available"),
             (("pepper", 100, "packets"), "Pepper seeds: 100 packets available"),
