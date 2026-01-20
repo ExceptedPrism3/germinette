@@ -1,3 +1,7 @@
+-------- 1.2.5 ------
+- **Module 01 Update**: Strict checks for v18 PDF (required `grow`/`age` methods, strict output).
+- **Fix**: Updated devtools solutions to match v18 requirements.
+
 -------- 1.2.4 ------
 - **Module 00 Update**: Updated requirements based on v17 PDF (stricter Ex5 output, strict signatures for Ex7).
 - **Fix**: Corrected devtools solution for Ex6.
