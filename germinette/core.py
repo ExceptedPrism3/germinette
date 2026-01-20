@@ -55,6 +55,13 @@ class ModuleDetector:
                 "ft_archive_creation.py", "ex1/ft_archive_creation.py"
             ],
             "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
+        },
+        "python_module_05": {
+            "files": [
+                "stream_processor.py", "ex0/stream_processor.py",
+                "data_stream.py", "ex1/data_stream.py"
+            ],
+            "dirs": ["ex0", "ex1", "ex2"]
         }
     }
 
@@ -105,7 +112,7 @@ class GerminetteRunner:
         for i, mod in enumerate(modules, 1):
              display_name = mod
              coming_soon = [
-                 "python_module_05", "python_module_06", "python_module_07", 
+                 "python_module_06", "python_module_07", 
                  "python_module_08", "python_module_09"
              ]
              if mod in coming_soon:
