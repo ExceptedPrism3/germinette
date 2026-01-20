@@ -84,6 +84,12 @@ class Tester(BaseTester):
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Style Error (Missing Docstrings)", doc_errors)
              return None, None
+        
+        type_hint_errors = self.check_type_hints(found_path)
+        if type_hint_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(exercise_label, "Style Error (Missing Type Hints)", type_hint_errors)
+             return None, None
             
         return "FOUND", found_path 
 
