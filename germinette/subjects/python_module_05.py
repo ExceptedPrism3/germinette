@@ -111,29 +111,47 @@ class Tester(BaseTester):
 
     # --- Exercise Tests ---
 
+    def check_strict_requirements(self, path, exercise_label):
+        """Checks for super(), try/except, and ABC usage."""
+        try:
+            with open(path, "r") as f:
+                tree = ast.parse(f.read())
+            
+            # Check for super()
+            has_super = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'super':
+                    has_super = True
+                    break
+            if not has_super:
+                console.print("[red]KO (Missing super())[/red]")
+                self.record_error(exercise_label, "Structure Error", "Must use 'super()' to initialize parent classes or call parent methods.")
+                return False
+
+            # Check for try/except
+            has_try = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Try):
+                    has_try = True
+                    break
+            if not has_try:
+                console.print("[red]KO (Missing try/except)[/red]")
+                self.record_error(exercise_label, "Structure Error", "Must use 'try/except' blocks for error handling.")
+                return False
+                
+            return True
+        except Exception as e:
+            console.print(f"[red]KO (AST Error: {e})[/red]")
+            return False
+
     def test_stream_processor(self):
         console.print("\n[bold]Testing Exercise 0: stream_processor[/bold]")
         exercise_label = "Exercise 0"
         status, path = self._load_module("stream_processor", exercise_label)
         if not status: return
 
-        # Static Check: ABC inheritance
-        try:
-            with open(path, "r") as f:
-                tree = ast.parse(f.read())
-            
-            # Check for ABC import
-            has_abc = False
-            for node in tree.body:
-                if isinstance(node, ast.ImportFrom) and node.module == 'abc':
-                    if 'ABC' in [n.name for n in node.names]:
-                        has_abc = True
-            
-            if not has_abc:
-                console.print("[red]KO (No ABC)[/red]")
-                self.record_error(exercise_label, "Structure Error", "Must import ABC from abc.")
-                return
-        except: pass
+        if not self.check_strict_requirements(path, exercise_label):
+            return
 
         import subprocess
         try:
@@ -171,6 +189,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 1"
         status, path = self._load_module("data_stream", exercise_label)
         if not status: return
+
+        if not self.check_strict_requirements(path, exercise_label):
+            return
 
         import subprocess
         try:
@@ -211,6 +232,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 2"
         status, path = self._load_module("nexus_pipeline", exercise_label)
         if not status: return
+
+        if not self.check_strict_requirements(path, exercise_label):
+            return
 
         import subprocess
         try:
