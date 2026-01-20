@@ -243,3 +243,36 @@ class BaseTester:
 
         except Exception as e:
             return f"Error running flake8: {e}"
+
+    def check_type_hints(self, path):
+        """Checks if all functions and methods have type hints (annotations)."""
+        import ast
+        
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            
+            missing = []
+            
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    if node.name.startswith("__") and node.name != "__init__":
+                        continue
+                    
+                    # Check return type annotation
+                    if node.returns is None:
+                        missing.append(f"Line {node.lineno}: Missing return type hint for function '{node.name}'")
+                    
+                    # Check parameter type annotations (skip 'self' and 'cls')
+                    for arg in node.args.args:
+                        if arg.arg in ('self', 'cls'):
+                            continue
+                        if arg.annotation is None:
+                            missing.append(f"Line {node.lineno}: Missing type hint for parameter '{arg.arg}' in function '{node.name}'")
+            
+            if missing:
+                return "\n".join(missing)
+            return None
+            
+        except Exception as e:
+            return f"Error checking type hints: {e}"
