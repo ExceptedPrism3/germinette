@@ -59,9 +59,14 @@ class ModuleDetector:
         "python_module_05": {
             "files": [
                 "stream_processor.py", "ex0/stream_processor.py",
-                "data_stream.py", "ex1/data_stream.py"
+                "data_stream.py", "ex1/data_stream.py",
+                "nexus_pipeline.py", "ex2/nexus_pipeline.py"
             ],
             "dirs": ["ex0", "ex1", "ex2"]
+        },
+        "python_module_06": {
+            "files": ["ft_sacred_scroll.py", "ft_import_transmutation.py"],
+            "dirs": ["alchemy"]
         }
     }
 
@@ -112,7 +117,7 @@ class GerminetteRunner:
         for i, mod in enumerate(modules, 1):
              display_name = mod
              coming_soon = [
-                 "python_module_06", "python_module_07", 
+                 "python_module_07", 
                  "python_module_08", "python_module_09"
              ]
              if mod in coming_soon:
