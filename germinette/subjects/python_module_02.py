@@ -160,6 +160,87 @@ class Tester(BaseTester):
                 console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
                 console.print()
 
+    def check_try_except(self, path, exercise_label):
+        import ast
+        try:
+            with open(path, "r") as f:
+                tree = ast.parse(f.read())
+            
+            has_try = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Try):
+                    has_try = True
+                    break
+            
+            if not has_try:
+                console.print("[red]KO (Strictness: Missing try/except)[/red]")
+                self.record_error(exercise_label, "Structure Error", "Strict check failed: You MUST use 'try/except' blocks.")
+                return False
+            return True
+        except Exception as e:
+            console.print(f"[red]KO (AST Error: {e})[/red]")
+            return False
+
+    def check_authorized_functions(self, path, exercise_label, allowed):
+        import ast
+        import builtins
+        
+        # Always allow exceptions (they are classes in builtins)
+        builtin_exceptions = {item for item in dir(builtins) 
+                              if isinstance(getattr(builtins, item), type) 
+                              and issubclass(getattr(builtins, item), BaseException)}
+        
+        # Allow implicit Python dunder methods or essential constructs if they appear as calls?
+        # Typically ast.Call visits user-written calls.
+        # We also usually allow super().
+        always_allowed = builtin_exceptions.union({'super', 'range', 'len', 'iter', 'next', 'isinstance', 'issubclass', 'list', 'dict', 'set', 'tuple', 'str', 'type'})
+        # PDF says "Python keywords... try, except, raise... do not need to be listed". 
+        # But 'int()' is authorized in Ex0 meaning 'float()' probably isn't.
+        # The list provided by PDF for Ex0 is "int(), print()".
+        # This implies things like 'input()' are forbidden?
+        # BUT 'int()' is for conversion.
+        # Let's enforce strictly what PDF lists, plus standard harmless python ops like len/range if needed?
+        # Re-reading PDF: "You may use any built-in exception types".
+        # "Authorized: int(), print()".
+        # If I strictly ban 'len', loops might be hard? PDF doesn't explicitly authorize 'len'.
+        # However, "Data Validation" might need len?
+        # "Takes a string input... tries to convert... check range".
+        # If I strictly follow "Authorized", then 'len' is forbidden.
+        # I will enforce strict whitelist. If user code fails because they used 'len', it's a KO.
+        # Unless "Basic python features" covers it?
+        # PDF says "keywords... are fundamental...".
+        # 42 subjects are notorious. If it says "Authorized: int, print", assume ONLY int, print.
+        # Exception: Exception classes (explicitly allowed).
+        
+        allowed_set = set(allowed).union(builtin_exceptions).union({'super'}) # super() is often needed for inheritance
+        
+        try:
+            with open(path, "r") as f:
+                tree = ast.parse(f.read())
+            
+            violation = None
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                     func_name = None
+                     if isinstance(node.func, ast.Name):
+                         func_name = node.func.id
+                     
+                     if func_name and func_name in dir(builtins):
+                         # It is a builtin (or shadowed). Assuming builtin check.
+                         if func_name not in allowed_set:
+                             violation = func_name
+                             break
+            
+            if violation:
+                console.print(f"[red]KO (Forbidden Function: {violation})[/red]")
+                self.record_error(exercise_label, "Forbidden Function", f"You used '{violation}()' which is NOT authorized.\nAuthorized: {', '.join(allowed)}")
+                return False
+            return True
+                
+        except Exception as e:
+            console.print(f"[red]KO (AST Error: {e})[/red]")
+            return False
+
     # --- Exercise Tests ---
 
     def test_first_exception(self):
@@ -167,6 +248,10 @@ class Tester(BaseTester):
         exercise_label = "Exercise 0"
         mod, path = self._load_module("ft_first_exception", exercise_label)
         if not mod: return
+
+        # Strict checks
+        if not self.check_try_except(path, exercise_label): return
+        if not self.check_authorized_functions(path, exercise_label, ["int", "print"]): return
 
         if not hasattr(mod, "check_temperature"):
             console.print("[red]KO (Function Missing)[/red]")
@@ -225,6 +310,10 @@ class Tester(BaseTester):
         exercise_label = "Exercise 1"
         mod, path = self._load_module("ft_different_errors", exercise_label)
         if not mod: return
+        
+        # Strict checks
+        if not self.check_try_except(path, exercise_label): return
+        if not self.check_authorized_functions(path, exercise_label, ["print", "open", "close"]): return
         
         if not hasattr(mod, "garden_operations"):
             console.print("[red]KO[/red]")
@@ -297,6 +386,9 @@ class Tester(BaseTester):
         mod, path = self._load_module("ft_custom_errors", exercise_label)
         if not mod: return
 
+        if not self.check_try_except(path, exercise_label): return
+        if not self.check_authorized_functions(path, exercise_label, ["print"]): return
+
         # Check classes
         classes = ["GardenError", "PlantError", "WaterError"]
         for c in classes:
@@ -350,6 +442,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 3"
         mod, path = self._load_module("ft_finally_block", exercise_label)
         if not mod: return
+
+        if not self.check_try_except(path, exercise_label): return
+        if not self.check_authorized_functions(path, exercise_label, ["print"]): return
         
         if not hasattr(mod, "water_plants"):
              self.record_error(exercise_label, "Missing Function", "water_plants not found")
@@ -404,6 +499,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 4"
         mod, path = self._load_module("ft_raise_errors", exercise_label)
         if not mod: return
+
+        if not self.check_try_except(path, exercise_label): return
+        if not self.check_authorized_functions(path, exercise_label, ["print"]): return
         
         if not hasattr(mod, "check_plant_health"):
              console.print("[red]KO[/red]")
@@ -458,6 +556,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 5"
         mod, path = self._load_module("ft_garden_management", exercise_label)
         if not mod: return
+
+        if not self.check_try_except(path, exercise_label): return
+        if not self.check_authorized_functions(path, exercise_label, ["print"]): return
         
         if not hasattr(mod, "GardenManager"):
             console.print("[red]KO (Missing Class)[/red]")
