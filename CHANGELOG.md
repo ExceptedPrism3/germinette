@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.3.3 - Module 02 Strictness Update (2025-??-??)
+- **Feature**: Implemented Strict/Authorized Function Checks for Module 02 "Garden Guardian" (v21 PDF).
+- **Strictness**:
+  - Enforced usage of "Authorized Functions" only (using AST analysis).
+  - Enforced mandatory `try/except` blocks in all exercises.
+- **Bug Fix**: Fixed missing test function in Mod 02 Ex5 (`check_authorized_functions` was missing).
+- **Maintenance**: Updated `ft_garden_management.py` to match new strict requirements.
+# Changelog
+
 ## v1.3.2 - Module 06 "The Codex" (2025-??-??)
 - **New Feature**: Implemented support for Module 06 "Import Mysteries".
 - **Tests Added**:
