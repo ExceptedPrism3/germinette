@@ -112,13 +112,16 @@ class GerminetteRunner:
         if not modules:
             console.print("[red]No modules found in subjects directory![/red]")
             return
-
+        
+        # Hardcode A-Maze-ing for now as it doesn't follow naming convention
+        modules.append("a_maze_ing")
         console.print("[bold]Available Modules:[/bold]")
         for i, mod in enumerate(modules, 1):
              display_name = mod
              coming_soon = [
                  "python_module_07", 
-                 "python_module_08", "python_module_09"
+                 "python_module_08", "python_module_09",
+                 "a_maze_ing"
              ]
              if mod in coming_soon:
                  display_name += " [yellow](Coming Soon 🚧)[/yellow]"
