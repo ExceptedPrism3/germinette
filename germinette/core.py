@@ -375,6 +375,8 @@ class BaseTester:
                          if func_name not in allowed_set:
                              # Check if it's one of the "implicit" types we might want to allow?
                              # No, if 'int' is authorized explicitly, then it demands strictness.
+                             # DEBUG
+                             # console.print(f"DEBUG: Violation {func_name}. Allowed: {allowed_set}")
                              violation = func_name
                              break
             
@@ -420,4 +422,61 @@ class BaseTester:
             return None
         except Exception as e:
             return f"AST Error in check_imports: {e}"
+
+    def verify_strict(self, path, exercise_label, allowed_funcs, allowed_imports=["sys"], enforce_try_except=False):
+        """
+        Runs a suite of strict checks:
+        1. No File I/O
+        2. Authorized Imports Only
+        3. Try/Except (Optional)
+        4. Authorized Functions Only
+        """
+        # 1. No File I/O
+        err = self.check_no_file_io(path)
+        if err:
+            console.print(f"[red]KO (Forbidden Operation)[/red]")
+            # Assuming 'record_error' is available on self (It is in Tester subclass, but BaseTester lacks it?)
+            # BaseTester doesn't have record_error?
+            # Tester subclasses implement record_error.
+            # BaseTester is abstract base.
+            # We should assume self.record_error exists or fallback.
+            # But Python is dynamic. Verify Tester has it. Yes.
+            if hasattr(self, 'record_error'):
+                self.record_error(exercise_label, "Forbidden Operation", err)
+            else:
+                console.print(err)
+            return False
+
+        # 2. Imports
+        err = self.check_imports(path, allowed_imports)
+        if err:
+            console.print(f"[red]KO (Forbidden Import)[/red]")
+            if hasattr(self, 'record_error'):
+                self.record_error(exercise_label, "Forbidden Import", err)
+            else:
+                console.print(err)
+            return False
+
+        # 3. Try/Except (if required)
+        if enforce_try_except:
+            err = self.check_try_except(path, exercise_label)
+            if err:
+                console.print(f"[red]KO (Strictness)[/red]")
+                if hasattr(self, 'record_error'):
+                    self.record_error(exercise_label, "Structure Error", err)
+                else:
+                    console.print(err)
+                return False
+
+        # 4. Authorized Functions
+        err = self.check_authorized_functions(path, allowed_funcs)
+        if err:
+            console.print(f"[red]KO (Forbidden Function)[/red]")
+            if hasattr(self, 'record_error'):
+                self.record_error(exercise_label, "Authorized Functions", err)
+            else:
+                console.print(err)
+            return False
+        
+        return True
 

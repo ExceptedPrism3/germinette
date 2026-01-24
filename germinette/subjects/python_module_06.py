@@ -93,22 +93,7 @@ class Tester(BaseTester):
                 tree = ast.parse(f.read())
             
             for node in ast.walk(tree):
-                # Check imports
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    # Forbidden libs: importlib
-                    names = []
-                    if isinstance(node, ast.Import):
-                        names = [n.name for n in node.names]
-                    elif isinstance(node, ast.ImportFrom) and node.module:
-                        names = [node.module]
-                    
-                    for name in names:
-                        if name == 'importlib' or name.startswith('importlib.'):
-                            console.print("[red]KO (Forbidden Library)[/red]")
-                            self.record_error(exercise_label, "Forbidden Magic", "Using 'importlib' is forbidden.")
-                            return False
-
-                # Check sys.path modification
+                # Check sys.path modification (ONLY sys.path check kept, Imports handled by verify_strict)
                 if isinstance(node, ast.Attribute):
                     if isinstance(node.value, ast.Name) and node.value.id == 'sys' and node.attr == 'path':
                          # If it's being assigned to or appended
@@ -136,6 +121,18 @@ class Tester(BaseTester):
 
         if not self.check_strict_forbidden(path, exercise_label):
             return
+
+        # Use verify_strict for Imports and Functions
+        # Allowed Imports: sys, alchemy (our package)
+        # Allowed Funcs: print, len, dir, getattr, setattr (introspection tools)
+        if not self.verify_strict(path, exercise_label, 
+                                  ["print", "len", "dir", "getattr", "setattr", "zip", "all", "any"], 
+                                  allowed_imports=["sys", "alchemy"], 
+                                  enforce_try_except=False): return # Try/except enforced locally for specific logic or check below? 
+                                  # Original test had separate try/except check but failed if missing.
+                                  # Let's enforcing try/except via verify_strict too?
+                                  # "use try/except blocks and return descriptive errors" -> Yes.
+
 
         # Explicit check for try/except required in PDF introduction: 
         # "use try/except blocks and return descriptive error messages instead of letting the program crash."
@@ -191,6 +188,12 @@ class Tester(BaseTester):
         if not self.check_strict_forbidden(path, exercise_label):
             return
 
+        # Ex1
+        if not self.verify_strict(path, exercise_label, 
+                                  ["print", "len", "dir", "getattr", "setattr"], 
+                                  allowed_imports=["sys", "alchemy"], 
+                                  enforce_try_except=False): return
+
         try:
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
@@ -231,6 +234,14 @@ class Tester(BaseTester):
         
         if not self.check_strict_forbidden(path, exercise_label):
             return
+        
+        # Ex2
+        if not self.verify_strict(path, exercise_label, 
+                                  ["print", "len", "dir", "getattr", "setattr"], 
+                                  allowed_imports=["sys", "alchemy", "basic", "advanced"], # Relative imports might mean local modules.
+                                  # Wait, Ex2 does separate modules? basic.py?
+                                  # If user imports "basic", it must be allowed.
+                                  enforce_try_except=False): return
 
         try:
             cmd = [sys.executable, path]
@@ -269,6 +280,12 @@ class Tester(BaseTester):
         
         if not self.check_strict_forbidden(path, exercise_label):
             return
+        
+        # Ex3
+        if not self.verify_strict(path, exercise_label, 
+                                  ["print", "len", "dir", "getattr", "setattr"], 
+                                  allowed_imports=["sys", "alchemy"], 
+                                  enforce_try_except=False): return
 
         try:
             cmd = [sys.executable, path]
