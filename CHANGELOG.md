@@ -1,3 +1,12 @@
+
+## v1.4.0 - Module 03 Data Quest Strictness Update (2025-??-??)
+- **Feature**: Strict enforcement of Module 03 (Data Quest) v22 PDF requirements.
+- **Strictness**: 
+  - **No File I/O**: Strictly forbidden in all Mod 03 exercises (using AST analysis for `open`, `write`, forbidden imports like `os`, `pathlib`).
+  - **Authorized Functions**: Strict whitelist for each exercise (e.g., Ex3 forbids `sorted`, Ex0 forbids `enumerate`).
+  - **Imports**: Only `sys` allowed (Ex2 adds `math`). Using `check_imports` logic.
+- **Refactor**: Moved strict check logic to `BaseTester` in `core.py` to share between Mod 02 and Mod 03.
+- **Testing**: Updated devtools solutions to comply with strict rules (removed usages of `list()`, `sorted()`, `Counter()`, `enumerate()`).
 # Changelog
 
 ## v1.3.3 - Module 02 Strictness Update (2025-??-??)

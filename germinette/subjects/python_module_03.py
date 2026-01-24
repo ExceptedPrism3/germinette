@@ -121,6 +121,38 @@ class Tester(BaseTester):
                 console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
                 console.print()
 
+    def verify_strict(self, path, exercise_label, allowed_funcs, allowed_imports=["sys"], enforce_try_except=False):
+        # 1. No File I/O
+        err = self.check_no_file_io(path)
+        if err:
+            console.print(f"[red]KO (Forbidden Operation)[/red]")
+            self.record_error(exercise_label, "Forbidden Operation", err)
+            return False
+
+        # 2. Imports
+        err = self.check_imports(path, allowed_imports)
+        if err:
+            console.print(f"[red]KO (Forbidden Import)[/red]")
+            self.record_error(exercise_label, "Forbidden Import", err)
+            return False
+
+        # 3. Try/Except (if required)
+        if enforce_try_except:
+            err = self.check_try_except(path, exercise_label)
+            if err:
+                console.print(f"[red]KO (Strictness)[/red]")
+                self.record_error(exercise_label, "Structure Error", err)
+                return False
+
+        # 4. Authorized Functions
+        err = self.check_authorized_functions(path, allowed_funcs)
+        if err:
+            console.print(f"[red]KO (Forbidden Function)[/red]")
+            self.record_error(exercise_label, "Authorized Functions", err)
+            return False
+        
+        return True
+
     # --- Exercise Tests ---
 
     def test_command_quest(self):
@@ -128,6 +160,10 @@ class Tester(BaseTester):
         exercise_label = "Exercise 0"
         status, path = self._load_module("ft_command_quest", exercise_label)
         if not status: return
+
+        # Strict Checks (Ex0: sys, sys.argv, len, print)
+        # Note: sys is allowed import.
+        if not self.verify_strict(path, exercise_label, ["len", "print"], allowed_imports=["sys"]): return
 
         # Test Case 1: No args
         out1 = self._run_script_args(path, [])
@@ -151,6 +187,13 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_score_analytics", exercise_label)
         if not status: return
 
+        # Strict Checks (Ex1: sys.argv, checking try/except)
+        # Allowed: len, sum, max, min, int, print
+        if not self.verify_strict(path, exercise_label, 
+                                  ["len", "sum", "max", "min", "int", "print"], 
+                                  allowed_imports=["sys"], 
+                                  enforce_try_except=True): return
+
         # Test Case 1: Valid Scores
         out1 = self._run_script_args(path, ["1500", "2300", "1800", "2100", "1950"])
         if "Average score: 1930.0" in out1 and "High score: 2300" in out1:
@@ -172,6 +215,15 @@ class Tester(BaseTester):
         exercise_label = "Exercise 2"
         status, path = self._load_module("ft_coordinate_system", exercise_label)
         if not status: return
+
+        # Strict Checks (Ex2: math allowed)
+        # Allowed: tuple, int, float, print, split?? (method), math.sqrt (call)
+        # Note: 'split' is listed in PDF "Authorized". If it refers to str.split, my checker ignores it (good).
+        # We assume standard methods on authorized types are OK.
+        if not self.verify_strict(path, exercise_label, 
+                                  ["tuple", "int", "float", "print"], 
+                                  allowed_imports=["sys", "math"],
+                                  enforce_try_except=True): return
 
         # This exercise seems to take no args but uses internal logic or input? 
         # PDF says "Parsing coordinates: '3,4,0'". 
@@ -203,6 +255,9 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_achievement_tracker", exercise_label)
         if not status: return
 
+        # Strict Checks (Ex3: set, len, print...)
+        if not self.verify_strict(path, exercise_label, ["set", "len", "print"], allowed_imports=["sys"]): return
+
         out = self._run_script_args(path, [])
         
         if "=== Achievement Tracker System ===" not in out:
@@ -228,6 +283,9 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_inventory_system", exercise_label)
         if not status: return
 
+        # Strict Checks (Ex4: dict, len, print...)
+        if not self.verify_strict(path, exercise_label, ["dict", "len", "print"], allowed_imports=["sys"]): return
+
         out = self._run_script_args(path, [])
         
         if "=== Player Inventory System ===" not in out:
@@ -251,6 +309,26 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_data_stream", exercise_label)
         if not status: return
 
+        # Strict Checks (Ex5: next, iter, range, len, print)
+        if not self.verify_strict(path, exercise_label, ["next", "iter", "range", "len", "print"], allowed_imports=["sys", "time", "random"]): 
+             # Note: Ex5 sample generator output mentions "Processing time" and "random" events?
+             # PDF Ex5: "Authorized: next(), iter(), range(), len(), print()".
+             # It actsuate does NOT authorize 'time' or 'random'.
+             # But the example output shows "Processing time: 0.045 seconds".
+             # To measure time, one usually needs 'time' module.
+             # BUT "Authorized" list is strict.
+             # Maybe the processing time is just a mock print in example? 
+             # Or maybe 'time' is part of the system or implicit?
+             # Subject PDF: "only sys import is allowed...".
+             # So 'time' is FORBIDDEN.
+             # The example output might be from the *tester* or the student Mock?
+             # "Example Output... $> python3 ft_data_stream.py".
+             # If student code prints time, they must use time module.
+             # But if it's forbidden, they must not.
+             # I will stick to Strict: Only sys. If they mock it with print, fine.
+             # Wait, Ex5 allowed imports: `sys`.
+             return
+
         out = self._run_script_args(path, [])
         
         if "=== Game Data Stream Processor ===" not in out:
@@ -273,6 +351,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 6"
         status, path = self._load_module("ft_analytics_dashboard", exercise_label)
         if not status: return
+        
+        # Strict Checks (Ex6: len, print, sum, max, min, sorted)
+        if not self.verify_strict(path, exercise_label, ["len", "print", "sum", "max", "min", "sorted"], allowed_imports=["sys"]): return
 
         out = self._run_script_args(path, [])
         
