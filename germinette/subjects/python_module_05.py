@@ -111,8 +111,8 @@ class Tester(BaseTester):
 
     # --- Exercise Tests ---
 
-    def check_strict_requirements(self, path, exercise_label):
-        """Checks for super(), try/except, and ABC usage."""
+    def check_polymorphism_requirements(self, path, exercise_label):
+        """Checks for mandatory usage of super()."""
         try:
             with open(path, "r") as f:
                 tree = ast.parse(f.read())
@@ -127,18 +127,6 @@ class Tester(BaseTester):
                 console.print("[red]KO (Missing super())[/red]")
                 self.record_error(exercise_label, "Structure Error", "Must use 'super()' to initialize parent classes or call parent methods.")
                 return False
-
-            # Check for try/except
-            has_try = False
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Try):
-                    has_try = True
-                    break
-            if not has_try:
-                console.print("[red]KO (Missing try/except)[/red]")
-                self.record_error(exercise_label, "Structure Error", "Must use 'try/except' blocks for error handling.")
-                return False
-                
             return True
         except Exception as e:
             console.print(f"[red]KO (AST Error: {e})[/red]")
@@ -150,8 +138,18 @@ class Tester(BaseTester):
         status, path = self._load_module("stream_processor", exercise_label)
         if not status: return
 
-        if not self.check_strict_requirements(path, exercise_label):
-            return
+        # Strict Checks
+        # Ex0: Basic Polymorphism.
+        # Authorized: print, len, super... (Standard)
+        # Imports: sys, abc (for abstract classes potentially)
+        # We enforce Try/Except via verify_strict
+        if not self.verify_strict(path, exercise_label, 
+                                  ["print", "len", "float", "int", "str", "isinstance", "issubclass", "all", "any", "zip", "sum"], 
+                                  allowed_imports=["sys", "abc", "random"], 
+                                  enforce_try_except=True): return
+
+        # Enforce super() explicitly
+        if not self.check_polymorphism_requirements(path, exercise_label): return
 
         import subprocess
         try:
@@ -190,8 +188,26 @@ class Tester(BaseTester):
         status, path = self._load_module("data_stream", exercise_label)
         if not status: return
 
-        if not self.check_strict_requirements(path, exercise_label):
-            return
+        # Strict Checks
+        # Ex1: Generator Polymorphism.
+        # Authorized: next, iter, range, len, print (from Plan/PDF v22)
+        # Imports: sys, random, time (Ex1 often uses these for simulation)
+        # Wait, plan said "Authorized Functions... next, iter, range, len, print".
+        # Does that mean `random` and `time` are forbidden?
+        # Mod 05 Ex1 "Data Stream". 
+        # "Simulate data..." -> implies random/time?
+        # The PDF v22 strictness usually forbids non-sys checks.
+        # But if the user code needs to simulate, they might need random.
+        # However, checking `devtools/test/python_module_05/ex1/data_stream.py`:
+        # It imports `random`, `time`.
+        # So I MUST allow them.
+        if not self.verify_strict(path, exercise_label, 
+                                  ["next", "iter", "range", "len", "print", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any", "sum"], 
+                                  allowed_imports=["sys", "random", "time", "abc"], 
+                                  enforce_try_except=True): return
+        
+        # Enforce super()
+        if not self.check_polymorphism_requirements(path, exercise_label): return
 
         import subprocess
         try:
@@ -233,8 +249,15 @@ class Tester(BaseTester):
         status, path = self._load_module("nexus_pipeline", exercise_label)
         if not status: return
 
-        if not self.check_strict_requirements(path, exercise_label):
-            return
+        # Strict Checks
+        # Ex2: Nexus Pipeline
+        if not self.verify_strict(path, exercise_label, 
+                                  ["print", "len", "range", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any"], 
+                                  allowed_imports=["sys", "json", "csv", "io", "abc"], # Ex2 handles JSON/CSV?
+                                  enforce_try_except=True): return
+        
+        # Enforce super()
+        if not self.check_polymorphism_requirements(path, exercise_label): return
 
         import subprocess
         try:
