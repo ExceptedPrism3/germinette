@@ -288,3 +288,136 @@ class BaseTester:
             
         except Exception as e:
             return f"Error checking type hints: {e}"
+
+    def check_try_except(self, path, exercise_label):
+        """Checks if the file contains at least one try...except block."""
+        import ast
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            
+            has_try = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Try):
+                    has_try = True
+                    break
+            
+            if not has_try:
+                console.print(f"[red]KO (Strictness: Missing try/except)[/red]")
+                # We return the error string instead of printing locally to allow caller to handle recording?
+                # But BaseTester usually returns strings?
+                # The existing methods return strings.
+                # However, python_module_02 implementation printed directly.
+                # To be consistent with check_docstrings, I should return error string or None.
+                return "Strict check failed: You MUST use 'try/except' blocks."
+            return None
+        except Exception as e:
+            return f"AST Error in check_try_except: {e}"
+
+    def check_authorized_functions(self, path, allowed):
+        """Checks if all called functions are in the allowed list (or built-in exceptions)."""
+        import ast
+        import builtins
+        
+        # Always allow exceptions (classes inheriting BaseException)
+        builtin_exceptions = {item for item in dir(builtins) 
+                              if isinstance(getattr(builtins, item), type) 
+                              and issubclass(getattr(builtins, item), BaseException)}
+        
+        # Always allow super() and essential constructs
+        # 'range', 'len', 'iter', 'next' are often needed for loops/generators unless strictly forbidden.
+        # But if the subject says "Authorized: sys.argv", it implies strictness.
+        # However, 'len()' is almost always needed.
+        # The PDF for Mod 03 Ex0 says: "Authorized: sys, sys.argv, len(), print()".
+        # So 'len' IS explicitly authorized. Which means if it's NOT listed, it's NOT allowed.
+        # So I should NOT add 'len' to always_allowed unless I assume implicit.
+        # But 'super()' is for classes.
+        # 'isinstance', 'issubclass' might be implicit?
+        # Let's start with a minimal set.
+        
+        always_allowed = builtin_exceptions.union({'super', 'range', 'iter', 'next', 'list', 'dict', 'set', 'tuple', 'str', 'int', 'float', 'bool', 'type'})
+        # Exception: if PDF says "Authorized: sys", does it mean ONLY sys?
+        # Mod 03 Ex0: "Authorized: sys, sys.argv, len(), print()".
+        # If I use 'range', is it cheating?
+        # Ex5 (Generator) "Authorized: next(), iter(), range(), len(), print()". 
+        # Since 'range' IS listed in Ex5, it implies 'range' is Forbidden in Ex0 if not listed!
+        # Thus, always_allowed should NOT include 'range' or 'len' if strict.
+        # But 'super' needed for OOP? Mod 03 is functional mostly (except exceptions... which used inheritance).
+        # I'll keep 'super' as valid.
+        # I'll keep types (list, dict...) because they are constructors but also types.
+        
+        allowed_set = set(allowed).union(builtin_exceptions).union({'super'})
+        # Add basic types just in case used for casting/typing, unless 'int()' is explicit.
+        # Mod 03 Ex1 says "Authorized: ... int() ...". So 'int' is explicit.
+        # If I strict check, I must respect the list.
+        
+        # However, type hints like `List[int]` don't count as calls.
+        # `x = int("5")` is a call.
+        
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            
+            violation = None
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                     func_name = None
+                     if isinstance(node.func, ast.Name):
+                         func_name = node.func.id
+                     elif isinstance(node.func, ast.Attribute):
+                         # Handle obj.method() ?
+                         # If checking strict functions, usually we check builtins.
+                         # Methods on objects (e.g. list.append) are hard to filter via AST without type interference.
+                         # We usually only restrict global builtins.
+                         pass
+                     
+                     if func_name and func_name in dir(builtins):
+                         if func_name not in allowed_set:
+                             # Check if it's one of the "implicit" types we might want to allow?
+                             # No, if 'int' is authorized explicitly, then it demands strictness.
+                             violation = func_name
+                             break
+            
+            if violation:
+                return f"You used '{violation}()' which is NOT authorized.\nAuthorized: {', '.join(allowed)}"
+            return None
+                
+        except Exception as e:
+            return f"AST Error in check_authorized_functions: {e}"
+
+    def check_no_file_io(self, path):
+        """Checks if file I/O operations (open) are present."""
+        import ast
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    if isinstance(node.func, ast.Name) and node.func.id == 'open':
+                         return "File I/O Forbidden: 'open()' function detected."
+            return None
+        except Exception as e:
+            return f"AST Error in check_no_file_io: {e}"
+
+    def check_imports(self, path, allowed_modules):
+        """Checks if only allowed modules are imported."""
+        import ast
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            
+            allowed_set = set(allowed_modules).union({'typing', 'collections'})
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name.split('.')[0] not in allowed_set:
+                            return f"Forbidden Import: '{alias.name}' is not authorized."
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module and node.module.split('.')[0] not in allowed_set:
+                        return f"Forbidden Import: '{node.module}' is not authorized."
+            return None
+        except Exception as e:
+            return f"AST Error in check_imports: {e}"
+
