@@ -30,6 +30,9 @@
 | **Module 01** | 🟢 Ready | Classes, Objects, Strict Docstrings |
 | **Module 02** | 🟢 Ready | Error Handling, Custom Exceptions |
 | **Module 03** | 🟢 Ready | `sys.argv`, Data Structures, Generators |
+| **Module 04** | 🟢 Ready | File Manipulation, Context Managers, Stdin/out |
+| **Module 05** | 🟢 Ready | Polymorphism, ABCs, Protocols |
+| **Module 06** | 🟢 Ready | Advanced Imports, Package Structure, Circular Dependencies |
 
 ---
 
