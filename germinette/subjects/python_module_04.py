@@ -25,11 +25,9 @@ class Tester(BaseTester):
     def _setup_test_data(self):
         """Generates necessary test files for Module 04."""
         files = {
-            "ancient_fragment.txt": "SECURE ARCHIVE FRAGMENT - 0x892B\nType: Text Data\nOrigin: Sector 7\nContent: The binary flow remains constant...",
-            "classified_data.txt": "TOP SECRET - EYES ONLY\nSecurity Level: 5\nAccess Code: ALPHA-DELTA-9\nProtocol: Vault Access Confirmed",
+            "ancient_fragment.txt": "SECURE ARCHIVE FRAGMENT - 0x892B\nType: Text Data\nOrigin: Sector 7\nContent: Digital preservation protocols established 2087\nKnowledge must survive the entropy wars\nEvery byte saved is a victory against oblivion",
+            "standard_archive.txt": "Archive ID: STD-2024-X\nStatus: Preserved\nRetention: Indefinite\nContent: Knowledge preserved for humanity",
             "security_protocols.txt": "PROTOCOL ALPHA: Verify all secure connections\nPROTOCOL BETA: Encrypt all outgoing data\nPROTOCOL GAMMA: Archive all transaction logs",
-            "standard_archive.txt": "Archive ID: STD-2024-X\nStatus: Preserved\nRetention: Indefinite\nContent: Standard daily logs and system metrics.",
-            "corrupted_archive.txt": "DATA_CORRUPTION_ERROR_0x7F4A"
         }
         
         try:
@@ -38,6 +36,18 @@ class Tester(BaseTester):
                     with open(name, "w") as f:
                         f.write(content)
                     self.generated_files.append(name)
+
+            # Ensure 'lost_archive.txt' does NOT exist for Ex4
+            if os.path.exists("lost_archive.txt"):
+                os.remove("lost_archive.txt")
+
+            # Create 'classified_vault.txt' with no permissions for Ex4
+            if not os.path.exists("classified_vault.txt"):
+                with open("classified_vault.txt", "w") as f:
+                    f.write("TOP SECRET DATA")
+                self.generated_files.append("classified_vault.txt")
+                os.chmod("classified_vault.txt", 0o000)
+
         except Exception as e:
             console.print(f"[red]Warning: Failed to create test data: {e}[/red]")
 
@@ -148,18 +158,21 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_ancient_text", exercise_label)
         if not status: return
 
+        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'read', 'close', 'print']):
+            return
+
         import subprocess
         try:
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
 
-            if "=== CYBER ARCHIVES - EXTRACTION SYSTEM ===" not in out:
+            if "=== CYBER ARCHIVES - DATA RECOVERY SYSTEM ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
-                self.record_error(exercise_label, "Output Error", "Missing '=== CYBER ARCHIVES - EXTRACTION SYSTEM ==='")
+                self.record_error(exercise_label, "Output Error", "Missing '=== CYBER ARCHIVES - DATA RECOVERY SYSTEM ==='")
                 return
             
-            if "SECURE ARCHIVE FRAGMENT" in out and "The binary flow remains constant" in out:
+            if "Digital preservation protocols established 2087" in out and "Every byte saved is a victory against oblivion" in out:
                 console.print("[green]OK (Content matches)[/green]")
             else:
                  console.print("[red]KO (Content Mismatch)[/red]")
@@ -172,6 +185,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 1"
         status, path = self._load_module("ft_archive_creation", exercise_label)
         if not status: return
+
+        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'write', 'close', 'print']):
+            return
 
         # Ensure target file doesn't exist
         if os.path.exists("new_discovery.txt"):
@@ -187,21 +203,24 @@ class Tester(BaseTester):
                  console.print("[red]KO (Missing Header)[/red]")
                  return
 
-            if "Archive 'new_discovery.txt' ready" in out or "ready for long-term preservation" in out:
-                 if os.path.exists("new_discovery.txt"):
-                     with open("new_discovery.txt", "r") as f:
-                         content = f.read()
-                     if "[ENTRY" in content:
-                          console.print("[green]OK (File Created & Content)[/green]")
-                     else:
-                          console.print("[red]KO (File Empty/Wrong Content)[/red]")
-                          self.record_error(exercise_label, "Logic Error", f"File created but content weird:\n{content}")
-                 else:
-                     console.print("[red]KO (File Not Created)[/red]")
-                     self.record_error(exercise_label, "Logic Error", "Script claimed success but 'new_discovery.txt' not found.")
+            if os.path.exists("new_discovery.txt"):
+                with open("new_discovery.txt", "r") as f:
+                    content = f.read()
+                
+                conditions = [
+                    "Quantum algorithm" in content or "Quantum" in content,
+                    "347%" in content,
+                    "trainee" in content.lower() or "archivist" in content.lower()
+                ]
+                
+                if all(conditions) or "[ENTRY" in content: # Loose check + specific keywords
+                     console.print("[green]OK (File Created & Content)[/green]")
+                else:
+                     console.print("[red]KO (File Content Missing Keywords)[/red]")
+                     self.record_error(exercise_label, "Logic Error", f"File created but content missing keywords (Quantum, 347%, trainee):\n{content}")
             else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Expected success message. Got:\n{out}")
+                console.print("[red]KO (File Not Created)[/red]")
+                self.record_error(exercise_label, "Logic Error", "Script claimed success but 'new_discovery.txt' not found.")
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
@@ -211,6 +230,9 @@ class Tester(BaseTester):
         exercise_label = "Exercise 2"
         status, path = self._load_module("ft_stream_management", exercise_label)
         if not status: return
+
+        if not self.verify_strict(path, exercise_label, allowed_funcs=['input', 'print'], allowed_imports=['sys']):
+            return
 
         import subprocess
         
@@ -247,6 +269,9 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_vault_security", exercise_label)
         if not status: return
 
+        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'read', 'write', 'print']):
+            return
+
         # Static Check: enforce 'with' statement
         try:
             with open(path, "r") as f:
@@ -272,7 +297,7 @@ class Tester(BaseTester):
                  console.print("[red]KO (Header)[/red]")
                  return
 
-            if "Vault automatically sealed" in out or "Access Code: ALPHA-DELTA-9" in out:
+            if "Vault automatically sealed" in out or "SECURE EXTRACTION" in out:
                  console.print("[green]OK (Logic)[/green]")
             else:
                  console.print("[red]KO (Logic)[/red]")
@@ -286,16 +311,17 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_crisis_response", exercise_label)
         if not status: return
 
-        # Check for try/except
+        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'read', 'write', 'print'], enforce_try_except=True):
+            return
+
+        # Check for 'with' (redundant with verify_strict? no verify_strict only does try/except)
         try:
             with open(path, "r") as f:
                 tree = ast.parse(f.read())
-            has_try = any(isinstance(node, ast.Try) for node in ast.walk(tree))
-            if has_try:
-                console.print("[green]OK (Uses try/except)[/green]")
-            else:
-                console.print("[red]KO (Missing try/except)[/red]")
-                self.record_error(exercise_label, "Structure Error", "Must use try/except block.")
+            has_with = any(isinstance(node, ast.With) for node in ast.walk(tree))
+            if not has_with:
+                console.print("[red]KO (Missing 'with')[/red]")
+                self.record_error(exercise_label, "Structure Error", "Must use 'with' statement.")
                 return
         except: pass
 
@@ -311,13 +337,13 @@ class Tester(BaseTester):
                  return
 
             conditions = [
-                "CRISIS ALERT",
-                "RESPONSE: Archive not found",
-                "STATUS: Crisis handled",
-                "SUCCESS: Archive recovered"
+                "CRISIS ALERT" in out,
+                "Archive not found" in out, # For lost_archive.txt
+                "Security protocols deny access" in out or "PermissionError" in out, # For classified_vault.txt
+                "Archive recovered" in out # For standard_archive.txt
             ]
             
-            if all(c in out for c in conditions):
+            if all(conditions):
                 console.print("[green]OK (Logic)[/green]")
             else:
                 console.print("[red]KO (Logic)[/red]")
