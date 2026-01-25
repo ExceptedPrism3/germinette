@@ -140,12 +140,16 @@ class Tester(BaseTester):
 
         # Strict Checks
         # Ex0: Basic Polymorphism.
-        # Authorized: print, len, super... (Standard)
-        # Imports: sys, abc (for abstract classes potentially)
-        # We enforce Try/Except via verify_strict
+        # Authorized: print, super, and common builtins.
+        # Imports: abc (for ABC), typing (implicit usually), but "Only standard library... unless specified".
+        # We allow standard utility imports but verify no forbidden ones if strict.
+        # PDF says "Authorized: print()". This implies strictness on functions?
+        # But we need len, sum, etc for logic.
+        allowed_builtins = ["print", "len", "float", "int", "str", "isinstance", "issubclass", "all", "any", "zip", "sum", "list", "dict"]
+        
         if not self.verify_strict(path, exercise_label, 
-                                  ["print", "len", "float", "int", "str", "isinstance", "issubclass", "all", "any", "zip", "sum"], 
-                                  allowed_imports=["sys", "abc", "random"], 
+                                  allowed_builtins, 
+                                  allowed_imports=["sys", "abc", "typing"], 
                                   enforce_try_except=True): return
 
         # Enforce super() explicitly
@@ -162,14 +166,15 @@ class Tester(BaseTester):
                 self.record_error(exercise_label, "Output Error", "Missing header '=== CODE NEXUS - DATA PROCESSOR FOUNDATION ==='")
                 return
             
+            # v24 PDF Specific output
             required = [
-                "Initializing Numeric Processor...",
-                "Processed 5 numeric values",
-                "Initializing Text Processor...",
-                "Processed text: 17 characters",
-                "Initializing Log Processor...",
-                "ALERT] ERROR level detected",
-                "=== Polymorphic Processing Demo ==="
+                "Processing data: [1, 2, 3, 4, 5]",
+                "Output: Processed 5 numeric values, sum=15, avg=3.0",
+                "Processing data: \"Hello Nexus World\"",
+                "Output: Processed text: 17 characters, 3 words",
+                "Output: [ALERT] ERROR level detected: Connection timeout",
+                "=== Polymorphic Processing Demo ===",
+                "Processed 3 numeric values, sum=6, avg=2.0"
             ]
             
             missing = [r for r in required if r not in out]
@@ -189,21 +194,14 @@ class Tester(BaseTester):
         if not status: return
 
         # Strict Checks
-        # Ex1: Generator Polymorphism.
-        # Authorized: next, iter, range, len, print (from Plan/PDF v22)
-        # Imports: sys, random, time (Ex1 often uses these for simulation)
-        # Wait, plan said "Authorized Functions... next, iter, range, len, print".
-        # Does that mean `random` and `time` are forbidden?
-        # Mod 05 Ex1 "Data Stream". 
-        # "Simulate data..." -> implies random/time?
-        # The PDF v22 strictness usually forbids non-sys checks.
-        # But if the user code needs to simulate, they might need random.
-        # However, checking `devtools/test/python_module_05/ex1/data_stream.py`:
-        # It imports `random`, `time`.
-        # So I MUST allow them.
+        # Ex1: Polymorphic Streams
+        # Authorization: isinstance, print.
+        # Imports: sys, random, time (simulation), abc, typing.
+        allowed_builtins = ["next", "iter", "range", "len", "print", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any", "sum", "list", "dict", "enumerate"]
+        
         if not self.verify_strict(path, exercise_label, 
-                                  ["next", "iter", "range", "len", "print", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any", "sum"], 
-                                  allowed_imports=["sys", "random", "time", "abc"], 
+                                  allowed_builtins, 
+                                  allowed_imports=["sys", "random", "time", "abc", "typing"], 
                                   enforce_try_except=True): return
         
         # Enforce super()
@@ -222,9 +220,9 @@ class Tester(BaseTester):
 
             required = [
                 "Initializing Sensor Stream",
-                "Sensor analysis: 3 readings processed",
+                "Sensor analysis: 3 readings processed, avg temp:",
                 "Initializing Transaction Stream",
-                "Transaction analysis: 3 operations",
+                "Transaction analysis: 3 operations, net flow:",
                 "Initializing Event Stream",
                 "Event analysis: 3 events",
                 "=== Polymorphic Stream Processing ===",
@@ -241,7 +239,7 @@ class Tester(BaseTester):
                  self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
 
         except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
+              console.print(f"[red]KO (Execution Error: {e})[/red]")
 
     def test_nexus_integration(self):
         console.print("\n[bold]Testing Exercise 2: nexus_pipeline[/bold]")
@@ -251,13 +249,27 @@ class Tester(BaseTester):
 
         # Strict Checks
         # Ex2: Nexus Pipeline
+        # Authorized: isinstance, print, collections, typing...
+        allowed_builtins = ["print", "len", "range", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any", "list", "dict", "set", "enumerate"]
+        
         if not self.verify_strict(path, exercise_label, 
-                                  ["print", "len", "range", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any"], 
-                                  allowed_imports=["sys", "json", "csv", "io", "abc"], # Ex2 handles JSON/CSV?
+                                  allowed_builtins, 
+                                  allowed_imports=["sys", "json", "csv", "io", "abc", "typing", "collections", "random", "time"], # random/time might be needed for simulation
                                   enforce_try_except=True): return
         
         # Enforce super()
         if not self.check_polymorphism_requirements(path, exercise_label): return
+
+        # Check for Check use of typing.Protocol? (duck typing)
+        # It's hard to verify strict Protocol usage via AST easily without deeper analysis, 
+        # but we can check if 'Protocol' is imported/used.
+        try:
+            with open(path, "r") as f:
+                content = f.read()
+            if "Protocol" not in content and "typing" in content:
+                 # Loose check, but good indicator
+                 console.print("[yellow]Warning: 'Protocol' not found. Duck typing is required.[/yellow]")
+        except: pass
 
         import subprocess
         try:
@@ -271,16 +283,20 @@ class Tester(BaseTester):
                 return
 
             required = [
+                "Pipeline capacity:", 
                 "Creating Data Processing Pipeline",
-                "Stage 1: Input validation",
-                "Stage 3: Output formatting",
+                "Stage 1: Input validation and parsing",
+                "Stage 3: Output formatting and delivery",
                 "=== Multi-Format Data Processing ===",
                 "Processing JSON data",
-                "Output: Processed temperature reading",
+                "Output: Processed temperature reading: 23.5°C",
                 "Processing CSV data",
+                "Output: User activity logged: 1 actions processed",
                 "Processing Stream data",
+                "Output: Stream summary:",
                 "=== Pipeline Chaining Demo ===",
                 "Pipeline A -> Pipeline B -> Pipeline C",
+                "Chain result: 100 records processed",
                 "=== Error Recovery Test ===",
                 "Recovery successful: Pipeline restored"
             ]

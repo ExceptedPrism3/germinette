@@ -435,7 +435,10 @@ class BaseTester:
         4. Authorized Functions Only
         """
         # 1. No File I/O
-        err = self.check_no_file_io(path)
+        err = None
+        if 'open' not in allowed_funcs:
+            err = self.check_no_file_io(path)
+            
         if err:
             console.print(f"[red]KO (Forbidden Operation)[/red]")
             # Assuming 'record_error' is available on self (It is in Tester subclass, but BaseTester lacks it?)

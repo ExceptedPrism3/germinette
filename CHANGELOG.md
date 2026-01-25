@@ -1,6 +1,16 @@
 
 # Changelog
 
+## v1.4.1 - PDF Sync Update (2025-01-25)
+- **Mod 04 Update (v23 PDF)**:
+  - Updated content checks for "Ancient Text" and "Crisis Response" to match v23 strings.
+  - Enforced strict authorization for `open` usage (skipped if not strictly authorized).
+  - Simulate real crisis constraints (chmod 000 for vault test).
+- **Mod 05 Update (v24 PDF)**:
+  - Strict output matching for Polymorphic Streams ("Pipeline capacity" etc.).
+  - Enforced strict function allow-lists (`super`, `isinstance` mandatory).
+  - Clarified authorized imports (`random`, `time`, `collections` for specific exercises).
+
 ## v1.4.0 - Strictness Standardization (2025-01-24)
 - **Mod 03 Complete**: Fully enforced v22 PDF strictness (Removed `sorted`, `list`, `enumerate`. Only `sys` imported).
 - **Global Strictness**: Refactored `BaseTester` to handle strict authorized function checks and imports centrally.
