@@ -67,6 +67,10 @@ class ModuleDetector:
         "python_module_06": {
             "files": ["ft_sacred_scroll.py", "ft_import_transmutation.py"],
             "dirs": ["alchemy"]
+        },
+        "python_module_07": {
+            "files": ["ex0/Card.py", "ex0/CreatureCard.py"],
+            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
         }
     }
 
@@ -119,7 +123,6 @@ class GerminetteRunner:
         for i, mod in enumerate(modules, 1):
              display_name = mod
              coming_soon = [
-                 "python_module_07", 
                  "python_module_08", "python_module_09",
                  "a_maze_ing"
              ]
