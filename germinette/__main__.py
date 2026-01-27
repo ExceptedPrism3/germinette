@@ -5,7 +5,7 @@ import subprocess
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import GerminetteRunner
-from germinette import __version__
+from . import __version__
 from germinette.utils import check_update
 
 console = Console()
