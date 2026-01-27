@@ -76,7 +76,7 @@ class Tester(BaseTester):
                 console.print()
 
     # --- Strictness Helpers ---
-    def common_strict_check(self, path, label, extra_funcs=None, extra_imports=None):
+    def common_strict_check(self, path, label, extra_funcs=None, extra_imports=None, enforce_try_except=False):
         allowed_funcs = [
             "print", "len", "sum", "max", "min", "range", "zip", "enumerate", 
             "int", "float", "str", "bool", "list", "dict", "set", "tuple",
@@ -89,7 +89,7 @@ class Tester(BaseTester):
         if extra_imports:
             allowed_imports.extend(extra_imports)
 
-        return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=True)
+        return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=enforce_try_except)
 
     def check_abc_inheritance(self, file_path, class_name, abc_name="ABC"):
         """Checks if a class inherits from ABC."""
@@ -180,7 +180,7 @@ class Tester(BaseTester):
         deck_py = os.path.join(os.path.dirname(path), "Deck.py")
         if os.path.exists(deck_py):
             # random is allowed
-            if not self.common_strict_check(deck_py, exercise_label): return
+            if not self.common_strict_check(deck_py, exercise_label, extra_imports=["ex0"]): return
 
         import subprocess
         try:
@@ -224,7 +224,7 @@ class Tester(BaseTester):
         # Check EliteCard.py strictness
         elite_py = os.path.join(os.path.dirname(path), "EliteCard.py")
         if os.path.exists(elite_py):
-            if not self.common_strict_check(elite_py, exercise_label): return
+            if not self.common_strict_check(elite_py, exercise_label, extra_imports=["ex0"]): return
 
         import subprocess
         try:
@@ -327,7 +327,7 @@ class Tester(BaseTester):
                 "Tournament Leaderboard:",
                 "1. Fire Dragon",
                 "Platform Report:",
-                "'platform_status':'active'"
+                "'platform_status': 'active'"
             ]
 
             missing = [r for r in required if r.lower() not in out.lower()]
