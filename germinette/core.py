@@ -423,6 +423,9 @@ class BaseTester:
                         if alias.name.split('.')[0] not in allowed_set:
                             return f"Forbidden Import: '{alias.name}' is not authorized."
                 elif isinstance(node, ast.ImportFrom):
+                    # Allow relative imports (level > 0)
+                    if node.level > 0:
+                        continue
                     if node.module and node.module.split('.')[0] not in allowed_set:
                         return f"Forbidden Import: '{node.module}' is not authorized."
             return None
