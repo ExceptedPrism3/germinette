@@ -1,5 +1,10 @@
-
 # Changelog
+
+## [1.4.2] - 2026-01-27
+### Added
+- **Module 07: DataDeck (Abstract Base Classes)**
+    - Implemented strictness checks for ABC usage, multiple inheritance, and design patterns.
+    - Verified output against `en.subject-25.pdf`.
 
 ## v1.4.1 - PDF Sync Update (2025-01-25)
 - **Mod 04 Update (v23 PDF)**:
