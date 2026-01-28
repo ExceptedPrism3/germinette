@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.0] - 2026-01-28
+### Added
+- **Module 08: The Matrix (Environment & Config)**
+  - Implemented `python_module_08` tester.
+  - Added support for Exercise 0 (`construct.py` - Virtual Env detection).
+  - Added support for Exercise 1 (`loading.py` - Dependency Management).
+  - Added support for Exercise 2 (`oracle.py` - Environment Variables).
+  - Added solution files in `devtools/test/python_module_08`.
+
 ## [1.4.3] - 2026-01-28
 ### Fixed
 - **Module 07 Verification**:

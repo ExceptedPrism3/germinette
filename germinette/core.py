@@ -69,8 +69,12 @@ class ModuleDetector:
             "dirs": ["alchemy"]
         },
         "python_module_07": {
-            "files": ["ex0/Card.py", "ex0/CreatureCard.py"],
+            "files": ["ex0/Card.py", "ex1/Deck.py", "ex2/EliteCard.py", "ex3/GameEngine.py", "ex4/TournamentPlatform.py"],
             "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
+        },
+        "python_module_08": {
+            "files": ["ex0/construct.py", "ex1/loading.py", "ex2/oracle.py"],
+            "dirs": ["ex0", "ex1", "ex2"]
         }
     }
 
@@ -122,10 +126,7 @@ class GerminetteRunner:
         console.print("[bold]Available Modules:[/bold]")
         for i, mod in enumerate(modules, 1):
              display_name = mod
-             coming_soon = [
-                 "python_module_08", "python_module_09",
-                 "a_maze_ing"
-             ]
+             coming_soon = ["python_module_09", "a_maze_ing"]
              if mod in coming_soon:
                  display_name += " [yellow](Coming Soon 🚧)[/yellow]"
              console.print(f"{i}. {display_name}")
@@ -176,7 +177,9 @@ class GerminetteRunner:
         except AttributeError:
             console.print(f"[red]Module {module_name} is invalid (missing Tester class).[/red]")
         except Exception as e:
-            console.print(f"[bold red]Error loading module:[/bold red] {e}")
+            import traceback
+            console.print(f"[red]Error loading module: {e}[/red]")
+            traceback.print_exc()
 
 class BaseTester:
     def run(self, exercise_name=None):
