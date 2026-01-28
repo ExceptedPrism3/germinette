@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.3] - 2026-01-28
+### Fixed
+- **Module 07 Verification**:
+  - Corrected output expectations for dictionary printing (added spaces).
+  - Fixed strictness checks to allow relative imports (e.g., `from ex0.Card import Card`).
+  - Relaxed strictness on library files (disabled mandatory `try/except` check for non-main files).
+  - Enabled auto-detection for `python_module_07`.
+
 ## [1.4.2] - 2026-01-27
 ### Added
 - **Module 07: DataDeck (Abstract Base Classes)**
