@@ -147,11 +147,11 @@ class Tester(BaseTester):
                 "Fire Dragon",
                 "legendary", # Rarity check (case insensitive usually, but check pdf output) -> 'Legendary'
                 "Play result:",
-                "'card_played':'Fire Dragon'",
+                "'card_played': 'Fire Dragon'",
                 "'mana_used': 5",
                 "Attack result:", 
-                "'attacker':'Fire Dragon'",
-                "'target':'Goblin Warrior'",
+                "'attacker': 'Fire Dragon'",
+                "'target': 'Goblin Warrior'",
                 "'damage_dealt': 7",
                 "Playable: False"
             ]
@@ -244,7 +244,7 @@ class Tester(BaseTester):
                 "Attack result:", "'damage': 5",
                 "Defense result:", "'still_alive': True",
                 "Magic phase:",
-                "Spell cast:", "'spell':'Fireball'",
+                "Spell cast:", "'spell': 'Fireball'",
                 "Mana channel:"
             ]
 
