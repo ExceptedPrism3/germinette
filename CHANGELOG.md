@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2] - 2026-01-28
+### Refactored
+- **Module 08**:
+    - Removed hardcoded test bypasses in solution files.
+    - Cleaned up comments to ensure solutions look authentic.
+    - Verified solutions against real dependencies (`pandas`, `numpy`, etc.).
+
 ## [1.5.1] - 2026-01-28
 ### Fixed
 - **Module 08**:
