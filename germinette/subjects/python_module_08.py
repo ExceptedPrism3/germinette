@@ -56,7 +56,7 @@ class Tester(BaseTester):
         if extra_funcs:
             allowed_funcs.extend(extra_funcs)
 
-        allowed_imports = ["sys", "os", "typing", "abc", "random", "datetime"]
+        allowed_imports = ["sys", "os", "typing", "abc", "random", "datetime", "site"]
         if extra_imports:
             allowed_imports.extend(extra_imports)
 
