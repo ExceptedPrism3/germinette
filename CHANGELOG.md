@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.5] - 2026-01-29
+
+
+### Changed
+- **Module 02**: Removed mandatory docstring checks.
+
 ## [1.5.4] - 2026-01-29
 ### Changed
 - **Module 08**:
