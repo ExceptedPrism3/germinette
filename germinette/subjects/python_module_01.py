@@ -137,12 +137,6 @@ class Tester(BaseTester):
             Plant = mod.Plant
             p = Plant("Test", 10, 5)
             
-            # Check for get_info() as per PDF v18 requirements
-            if not hasattr(p, 'get_info'):
-                self.record_error(label, "Missing Method", "Method 'get_info' is required by PDF requirements.")
-                console.print("[red]KO[/red]")
-                return
-            
             console.print("[green]OK[/green]")
         except Exception as e:
             console.print("[red]KO[/red]")
@@ -167,6 +161,7 @@ class Tester(BaseTester):
             missing = []
             if not hasattr(p, 'grow'): missing.append('grow')
             if not hasattr(p, 'age'): missing.append('age')
+            if not hasattr(p, 'get_info'): missing.append('get_info')
             
             if missing:
                 self.record_error(label, "Missing Methods", f"Missing required methods: {', '.join(missing)}")

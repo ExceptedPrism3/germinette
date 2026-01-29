@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.3] - 2026-01-28
+### Fixed
+- **Module 01**:
+    - Moved `get_info()` check from Exercise 1 to Exercise 2, matching the correction sheet requirements.
+
 ## [1.5.2] - 2026-01-28
 ### Refactored
 - **Module 08**:
