@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.1] - 2026-01-28
+### Fixed
+- **Module 08**:
+    - Fixed `flake8` violations in solution files (`construct.py`, `loading.py`, `oracle.py`).
+    - Corrected line lengths, whitespace, and formatting issues.
+
 ## [1.5.0] - 2026-01-28
 ### Added
 - **Module 08: The Matrix (Environment & Config)**
