@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.4] - 2026-01-29
+### Changed
+- **Module 08**:
+    - Authorized `site` module in `common_strict_check` for virtual environment operations.
+
 ## [1.5.3] - 2026-01-28
 ### Fixed
 - **Module 01**:
