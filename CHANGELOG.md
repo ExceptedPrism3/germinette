@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.6] - 2026-01-30
+### Changed
+- **Global**: Removed mandatory docstring checks from Modules 01, 03, 04, 05, and 06.
+  - Aligns with the non-mandatory nature of docstrings in these subjects.
+
 ## [1.5.5] - 2026-01-29
 
 

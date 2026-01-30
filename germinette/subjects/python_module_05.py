@@ -66,11 +66,7 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
              return None, None
         
-        doc_errors = self.check_docstrings(found_path)
-        if doc_errors:
-             console.print("[red]KO[/red]")
-             self.record_error(exercise_label, "Style Error (Missing Docstrings)", doc_errors)
-             return None, None
+
 
         # Type Hint Checks
         type_errors = self.check_type_hints(found_path)
