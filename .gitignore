@@ -21,6 +21,23 @@ wheels/
 .installed.cfg
 *.egg
 
+# Temp Artifacts
+*.tar
+*.pdf
+module_*_content.txt
+extract_pdf.py
+debug_import.py
+card_generator.tar
+data_generator.tar
+# Module 10 (Local Only)
+germinette/subjects/python_module_10.py
+devtools/test/python_module_10/
+
+# Build
+build/
+dist/
+*.egg-info/
+
 # Virtual Environments
 .env
 .venv

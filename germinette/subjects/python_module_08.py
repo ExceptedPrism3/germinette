@@ -61,6 +61,13 @@ class Tester(BaseTester):
             allowed_imports.extend(extra_imports)
 
         # Note: We enforce try/except loosely, or strict? 
+        # Strict Type Hints
+        type_errors = self.check_type_hints(path)
+        if type_errors:
+             console.print("[red]KO (Type Hints)[/red]")
+             self.record_error(label, "Style Error (Missing Type Hints)", type_errors)
+             return False
+
         return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=False)
 
     def test_the_matrix(self):

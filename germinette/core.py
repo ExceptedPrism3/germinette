@@ -75,6 +75,10 @@ class ModuleDetector:
         "python_module_08": {
             "files": ["ex0/construct.py", "ex1/loading.py", "ex2/oracle.py"],
             "dirs": ["ex0", "ex1", "ex2"]
+        },
+        "python_module_09": {
+            "files": ["ex0/space_station.py", "ex1/alien_contact.py", "ex2/space_crew.py"],
+            "dirs": ["ex0", "ex1", "ex2"]
         }
     }
 
@@ -126,7 +130,7 @@ class GerminetteRunner:
         console.print("[bold]Available Modules:[/bold]")
         for i, mod in enumerate(modules, 1):
              display_name = mod
-             coming_soon = ["python_module_09", "a_maze_ing"]
+             coming_soon = ["a_maze_ing"]
              if mod in coming_soon:
                  display_name += " [yellow](Coming Soon 🚧)[/yellow]"
              console.print(f"{i}. {display_name}")
