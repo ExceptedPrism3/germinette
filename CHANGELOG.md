@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.6.2] - 2026-02-03
+### Changed
+- **Module 01**: Relaxed verify strictness based on subject re-eval.
+  - Ex2: Removed strict check for `grow()` method name.
+  - Ex3: Removed minimum instance count check (5).
+  - Ex4: Removed valid accessor checks for `get_height` and `get_age`.
+  - Ex5: Removed strict check for `bloom()` method.
+  - Ex6: Removed strict check for specific analytics output strings.
+
 ## [1.6.1] - 2026-02-03
 ### Fixed
 - **Module 10**:

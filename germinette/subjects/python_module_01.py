@@ -154,15 +154,16 @@ class Tester(BaseTester):
             p = Plant("Bamboo", 100, 10)
             
             # PDF v18 Strict Requirements: grow(), age()
-            missing = []
-            if not hasattr(p, 'grow'): missing.append('grow')
-            if not hasattr(p, 'age'): missing.append('age')
-            if not hasattr(p, 'get_info'): missing.append('get_info')
+            # PDF v18: Methods not strictly named, just functionality via simulation.
+            # missing = []
+            # if not hasattr(p, 'grow'): missing.append('grow')
+            # if not hasattr(p, 'age'): missing.append('age')
+            # if not hasattr(p, 'get_info'): missing.append('get_info')
             
-            if missing:
-                self.record_error(label, "Missing Methods", f"Missing required methods: {', '.join(missing)}")
-                console.print("[red]KO[/red]")
-                return
+            # if missing:
+            #     self.record_error(label, "Missing Methods", f"Missing required methods: {', '.join(missing)}")
+            #     console.print("[red]KO[/red]")
+            #     return
 
             # Check output for "=== Day 7 ===" simulation
             output = self._run_script(path)
@@ -192,11 +193,11 @@ class Tester(BaseTester):
                      console.print("[red]KO[/red]")
                      return
             
-            # PDF requires at least 5 plants
-            if output.count("Created:") < 5:
-                 self.record_error(label, "Logic Error", "Expected at least 5 plants to be created.")
-                 console.print("[red]KO[/red]")
-                 return
+            # PDF does not strictly enforce 5 instances.
+            # if output.count("Created:") < 5:
+            #      self.record_error(label, "Logic Error", "Expected at least 5 plants to be created.")
+            #      console.print("[red]KO[/red]")
+            #      return
 
             console.print("[green]OK[/green]")
         except Exception as e:
@@ -216,9 +217,9 @@ class Tester(BaseTester):
                 console.print("[red]KO[/red]")
                 return
 
-            # Check Strict Methods
+            # Check Strict Methods (Getters not required)
             p = SecurePlant("Test", 10, 1)
-            req_methods = ['set_height', 'set_age', 'get_height', 'get_age']
+            req_methods = ['set_height', 'set_age'] # , 'get_height', 'get_age'
             missing = [m for m in req_methods if not hasattr(p, m)]
             
             if missing:
@@ -259,10 +260,10 @@ class Tester(BaseTester):
             f = Flower("Test", 1, 1, "Red")
             t = Tree("Test", 100, 10, 50)
             
-            if not hasattr(f, 'bloom'):
-                 self.record_error(label, "Missing Method", "Flower missing 'bloom()'")
-                 console.print("[red]KO[/red]")
-                 return
+            # if not hasattr(f, 'bloom'):
+            #      self.record_error(label, "Missing Method", "Flower missing 'bloom()'")
+            #      console.print("[red]KO[/red]")
+            #      return
             if not hasattr(t, 'produce_shade'):
                  self.record_error(label, "Missing Method", "Tree missing 'produce_shade()'")
                  console.print("[red]KO[/red]")
@@ -293,10 +294,10 @@ class Tester(BaseTester):
                  return
 
             output = self._run_script(path)
-            if "Garden scores" not in output or "Total gardens managed" not in output:
-                 self.record_error(label, "Output Error", "Missing analytics sections (scores/totals) in output.")
-                 console.print("[red]KO[/red]")
-                 return
+            # if "Garden scores" not in output or "Total gardens managed" not in output:
+            #      self.record_error(label, "Output Error", "Missing analytics sections (scores/totals) in output.")
+            #      console.print("[red]KO[/red]")
+            #      return
 
             console.print("[green]OK[/green]")
         except Exception as e:
