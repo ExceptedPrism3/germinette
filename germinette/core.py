@@ -79,6 +79,10 @@ class ModuleDetector:
         "python_module_09": {
             "files": ["ex0/space_station.py", "ex1/alien_contact.py", "ex2/space_crew.py"],
             "dirs": ["ex0", "ex1", "ex2"]
+        },
+        "python_module_10": {
+            "files": ["ex0/lambda_spells.py", "ex1/higher_magic.py", "ex2/scope_mysteries.py"],
+            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
         }
     }
 
@@ -133,6 +137,9 @@ class GerminetteRunner:
              coming_soon = ["a_maze_ing"]
              if mod in coming_soon:
                  display_name += " [yellow](Coming Soon 🚧)[/yellow]"
+             
+
+
              console.print(f"{i}. {display_name}")
         
         console.print("\n[yellow]Could not auto-detect module in this directory.[/yellow]")

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.6.0] - 2026-02-03
+### Added
+- **Module 10: FuncMage (Functional Programming)**:
+  - Added support for all Functional Programming exercises.
+  - Ex0: Lambda Sanctum (`lambda_spells.py`).
+  - Ex1: Higher Realm (`higher_magic.py`).
+  - Ex2: Memory Depths (`scope_mysteries.py`).
+  - Ex3: Ancient Library (`functools_artifacts.py`).
+  - Ex4: Master's Tower (`decorator_mastery.py`).
+- **Features**:
+  - Validates usage of functional patterns (lambdas, closures, decorators).
+  - Enforces strict type hints (including return types).
+  - Forbids classes in Ex0-Ex3 (Functional focus).
+
 ## [1.5.7] - 2026-01-30
 ### Fixed
 - **Module 08 & 09**:

@@ -29,9 +29,7 @@ extract_pdf.py
 debug_import.py
 card_generator.tar
 data_generator.tar
-# Module 10 (Local Only)
-germinette/subjects/python_module_10.py
-devtools/test/python_module_10/
+
 
 # Build
 build/
