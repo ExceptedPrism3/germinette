@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.1] - 2026-02-03
+### Fixed
+- **Module 10**:
+  - Authorized `round()` function (required for Ex0).
+  - Fixed missing type hints in solution files (inner functions, test helpers).
+
 ## [1.6.0] - 2026-02-03
 ### Added
 - **Module 10: FuncMage (Functional Programming)**:

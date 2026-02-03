@@ -90,7 +90,7 @@ class Tester(BaseTester):
             "int", "float", "str", "bool", "list", "dict", "set", "tuple",
             "isinstance", "issubclass", "super", "next", "iter", "all", "any", "id",
             "map", "filter", "sorted", "callable", "repr", "type", "vars", "dir",
-            "getattr", "setattr", "hasattr", "staticmethod", "classmethod", "property"
+            "getattr", "setattr", "hasattr", "staticmethod", "classmethod", "property", "round"
         ]
         
         allowed_imports_base = ["sys", "os", "typing", "abc", "random", "datetime", 
