@@ -33,6 +33,10 @@
 | **Module 04** | 🟢 Ready | File Manipulation, Context Managers, Stdin/out |
 | **Module 05** | 🟢 Ready | Polymorphism, ABCs, Protocols |
 | **Module 06** | 🟢 Ready | Advanced Imports, Package Structure, Circular Dependencies |
+| **Module 07** | 🟢 Ready | Python's Magic, Decorators, Inner Functions |
+| **Module 08** | 🟢 Ready | The Life of Data, Typing |
+| **Module 09** | 🟢 Ready | The Validation, Decorators Pattern |
+| **Module 10** | 🟢 Ready | Functional Power, Functools, Itertools |
 
 ---
 
