@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.3] - 2026-02-05
+### Fixed
+- **Module 03**: Updated `ft_inventory_system` (Ex4) tester to match Version 2.2 Subject (Issue #5).
+  - New output requirements (Analysis, Categories, Suggestions).
+  - Removed outdated gold/transaction checks.
+
 ## [1.6.2] - 2026-02-03
 ### Changed
 - **Module 01**: Relaxed verify strictness based on subject re-eval.

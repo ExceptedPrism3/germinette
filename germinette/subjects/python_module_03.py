@@ -279,25 +279,65 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_inventory_system", exercise_label)
         if not status: return
 
-        # Strict Checks (Ex4: dict, len, print...)
-        if not self.verify_strict(path, exercise_label, ["dict", "len", "print"], allowed_imports=["sys"]): return
+        # Strict Checks (Ex4: dict, len, print...) and sys/sys.argv used for input
+        # Subject says "dict methods like keys(), values(), items(), get(), update()"
+        if not self.verify_strict(path, exercise_label, 
+                                  ["dict", "len", "print", "keys", "values", "items", "get", "update", "int", "sorted"], 
+                                  allowed_imports=["sys"]): return
 
-        out = self._run_script_args(path, [])
+        # Test Case: Defined in Subject
+        # Input: sword:1 potion:5 shield:2 armor:3 helmet:1
+        args = ["sword:1", "potion:5", "shield:2", "armor:3", "helmet:1"]
+        out = self._run_script_args(path, args)
         
-        if "=== Player Inventory System ===" not in out:
-             console.print("[red]KO (Missing Header)[/red]")
-             self.record_error(exercise_label, "Output Error", "Missing header.")
+        # 1. Header Checks
+        headers = [
+            "=== Inventory System Analysis ===",
+            "=== Current Inventory ===",
+            "=== Inventory Statistics ===",
+            "=== Item Categories ===",
+            "=== Management Suggestions ===",
+            "=== Dictionary Properties Demo ==="
+        ]
+        
+        missing_headers = [h for h in headers if h not in out]
+        if missing_headers:
+             console.print(f"[red]KO (Missing Headers: {len(missing_headers)})[/red]")
+             self.record_error(exercise_label, "Structure Error", f"Missing sections: {missing_headers}")
              return
 
-        if "Inventory value: 950 gold" in out:
-             console.print("[green]OK (Value Calculation)[/green]")
+        # 2. Data Checks
+        # Total items: 1+5+2+3+1 = 12
+        # Unique types: 5
+        if "Total items in inventory: 12" in out and "Unique item types: 5" in out:
+             console.print("[green]OK (Inventory Totals)[/green]")
         else:
-             console.print("[red]KO (Value Calculation)[/red]")
-             
-        if "=== Transaction: Alice gives Bob 2 potions ===" in out:
-             console.print("[green]OK (Transaction Logic)[/green]")
+             console.print("[red]KO (Inventory Totals)[/red]")
+             self.record_error(exercise_label, "Math Error", "Incorrect Total Items or Unique Types calculation.")
+
+        # 3. Stats
+        # Most abundant: potion (5)
+        # Least abundant: sword (1) OR helmet (1)
+        if "Most abundant: potion" in out and ("Least abundant: sword" in out or "Least abundant: helmet" in out):
+             console.print("[green]OK (Statistics)[/green]")
         else:
-             console.print("[red]KO (Transaction Logic)[/red]")
+             console.print("[red]KO (Statistics)[/red]")
+             self.record_error(exercise_label, "Logic Error", "Incorrect Most/Least abundant item logic.")
+
+        # 4. Categories (Simulated check)
+        # Moderate: potion (5)
+        # Scarce: sword (1), shield (2), etc.
+        if "Moderate:" in out and "potion" in out and "Scarce:" in out:
+             console.print("[green]OK (Categories)[/green]")
+        else:
+             console.print("[red]KO (Categories)[/red]")
+
+        # 5. Restock Suggestion (should list scarcity or 1s?)
+        # Subject Example: "Restock needed: ['sword', 'helmet']" (items with 1 unit?)
+        if "Restock needed:" in out:
+             console.print("[green]OK (Management)[/green]")
+        else:
+             console.print("[red]KO (Management)[/red]")
 
     def test_data_stream(self):
         console.print("\n[bold]Testing Exercise 5: ft_data_stream[/bold]")
