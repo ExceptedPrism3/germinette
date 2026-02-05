@@ -21,6 +21,18 @@ fi
 # Cleanup build artifacts just in case
 rm -rf build/ dist/ *.egg-info "$HOME/.germinette_repo_path"
 
+# Remove venv if exists
+if [ -d ".germinenv" ]; then
+    echo -e "${BLUE}🗑️  Removing virtual environment...${NC}"
+    rm -rf .germinenv
+fi
+
+# Remove symlink if it exists
+if [ -L "$HOME/.local/bin/germinette" ]; then
+    echo -e "${BLUE}🗑️  Removing symlink...${NC}"
+    rm "$HOME/.local/bin/germinette"
+fi
+
 # Shell Config Cleanup
 SHELL_CONFIG=""
 if [[ "$SHELL" == */zsh ]]; then

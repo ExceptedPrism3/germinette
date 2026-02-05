@@ -10,7 +10,33 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🌱 Installing Germinette...${NC}"
 
 # Install the package
-pip install --user .
+if [[ "$1" == "--home" ]]; then
+    echo -e "${BLUE}🏠 Installing in isolated environment (--home)...${NC}"
+    
+    # Create venv if it doesn't exist
+    if [ ! -d ".germinenv" ]; then
+        python3 -m venv .germinenv
+    fi
+    
+    # Activate and install
+    source .germinenv/bin/activate
+    pip install .
+    
+    # Ensure local bin exists
+    mkdir -p "$HOME/.local/bin"
+    
+    # Symlink the binary to be accessible globally
+    # We use the absolute path to the venv binary
+    VENV_BIN="$PWD/.germinenv/bin/germinette"
+    TARGET_LINK="$HOME/.local/bin/germinette"
+    
+    echo -e "${BLUE}🔗 Linking $VENV_BIN to $TARGET_LINK...${NC}"
+    ln -sf "$VENV_BIN" "$TARGET_LINK"
+    
+else
+    # Standard user install
+    pip install --user .
+fi
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Installation failed.${NC}"
