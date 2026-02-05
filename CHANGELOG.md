@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.4] - 2026-02-05
+### Added
+- **Infrastructure**: Added `--home` flag to `install.sh` (Feature #4).
+  - Creates and installs into a local virtual environment (`.germinenv`).
+  - Automatically symlinks the binary to `~/.local/bin/germinette`.
+  - Bypasses PEP 668 restrictions on managed systems.
+
 ## [1.6.3] - 2026-02-05
 ### Fixed
 - **Module 03**: Updated `ft_inventory_system` (Ex4) tester to match Version 2.2 Subject (Issue #5).
