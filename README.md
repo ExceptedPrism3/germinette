@@ -57,6 +57,13 @@ cd germinette
 
 **That's it!** The script will install Germinette and automatically configure your PATH (so you can run the command from anywhere).
 
+### 🏠 For Managed Systems (Debian/Ubuntu/PEP 668)
+If you encounter "externally-managed-environment" errors or prefer isolation, use:
+```bash
+./install.sh --home
+```
+This creates a local ecosystem (`.germinenv`) and symlinks the binary, keeping your system Python clean.
+
 If installation fails, please [open an issue on GitHub](https://github.com/ExceptedPrism3/germinette/issues).
 
 ### 🔄 Updating
