@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.5] - 2026-02-07
+### Fixed
+- **Installation**: `install.sh` now detects active virtual environments (`$VIRTUAL_ENV`) and installs without `--user` flag to avoid errors (Issue #6).
+
 ## [1.6.4] - 2026-02-05
 ### Added
 - **Infrastructure**: Added `--home` flag to `install.sh` (Feature #4).

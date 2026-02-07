@@ -34,8 +34,14 @@ if [[ "$1" == "--home" ]]; then
     ln -sf "$VENV_BIN" "$TARGET_LINK"
     
 else
-    # Standard user install
-    pip install --user .
+    # Standard install logic
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        echo -e "${BLUE}🐍 Virtual environment detected ($VIRTUAL_ENV). Installing without --user...${NC}"
+        pip install .
+    else
+        echo -e "${BLUE}👤 Installing to user site-packages...${NC}"
+        pip install --user .
+    fi
 fi
 
 if [ $? -ne 0 ]; then
