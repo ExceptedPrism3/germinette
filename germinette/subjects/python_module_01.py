@@ -269,6 +269,13 @@ class Tester(BaseTester):
                  console.print("[red]KO[/red]")
                  return
 
+            # Verify script execution to catch runtime errors (like missing methods in main)
+            output = self._run_script(path)
+            if "AttributeError" in output or "Traceback" in output or "Error" in output:
+                 self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                 console.print("[red]KO[/red]")
+                 return
+
             console.print("[green]OK[/green]")
         except Exception as e:
             console.print("[red]KO[/red]")
