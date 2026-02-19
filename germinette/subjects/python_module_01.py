@@ -294,10 +294,10 @@ class Tester(BaseTester):
                  return
 
             output = self._run_script(path)
-            # if "Garden scores" not in output or "Total gardens managed" not in output:
-            #      self.record_error(label, "Output Error", "Missing analytics sections (scores/totals) in output.")
-            #      console.print("[red]KO[/red]")
-            #      return
+            if "Garden scores" not in output or "Total gardens managed" not in output:
+                 self.record_error(label, "Output Error", "Missing analytics sections (scores/totals) in output.")
+                 console.print("[red]KO[/red]")
+                 return
 
             console.print("[green]OK[/green]")
         except Exception as e:
