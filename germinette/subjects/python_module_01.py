@@ -107,6 +107,11 @@ class Tester(BaseTester):
 
         try:
             output = self._run_script(path)
+            if "AttributeError" in output or "Traceback" in output or "Error" in output:
+                 self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                 console.print("[red]KO[/red]")
+                 return
+
             # PDF v18: "Rose: 25cm, 30 days old" (approximate match required)
             if "Rose" not in output or "25cm" not in output:
                 console.print("[red]KO[/red]")
@@ -133,6 +138,13 @@ class Tester(BaseTester):
             Plant = mod.Plant
             p = Plant("Test", 10, 5)
             
+            # Run script to catch runtime errors
+            output = self._run_script(path)
+            if "AttributeError" in output or "Traceback" in output or "Error" in output:
+                 self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                 console.print("[red]KO[/red]")
+                 return
+
             console.print("[green]OK[/green]")
         except Exception as e:
             console.print("[red]KO[/red]")
@@ -167,6 +179,11 @@ class Tester(BaseTester):
 
             # Check output for "=== Day 7 ===" simulation
             output = self._run_script(path)
+            if "AttributeError" in output or "Traceback" in output or "Error" in output:
+                 self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                 console.print("[red]KO[/red]")
+                 return
+
             if "=== Day 1 ===" not in output or "=== Day 7 ===" not in output:
                  self.record_error(label, "Output Mismatch", "Expected simulation output (Day 1 to Day 7).")
                  console.print("[red]KO[/red]")
@@ -185,6 +202,11 @@ class Tester(BaseTester):
 
         try:
             output = self._run_script(path)
+            if "AttributeError" in output or "Traceback" in output or "Error" in output:
+                 self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                 console.print("[red]KO[/red]")
+                 return
+
             required = ["=== Plant Factory Output ===", "Total plants created:"]
             
             for req in required:
@@ -229,6 +251,12 @@ class Tester(BaseTester):
 
             # Run script to check validation messages
             output = self._run_script(path)
+            if "Traceback" in output or "Error" in output: # AttributeError allowed here if caught, but crash disallowed
+                 if "AttributeError" in output and "Traceback" in output:
+                     self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                     console.print("[red]KO[/red]")
+                     return
+
             if "Security: Negative height rejected" not in output:
                  self.record_error(label, "Security Error", "Expected security rejection message in output.")
                  console.print("[red]KO[/red]")
@@ -301,6 +329,11 @@ class Tester(BaseTester):
                  return
 
             output = self._run_script(path)
+            if "AttributeError" in output or "Traceback" in output or "Error" in output:
+                 self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output}")
+                 console.print("[red]KO[/red]")
+                 return
+
             if "Garden scores" not in output or "Total gardens managed" not in output:
                  self.record_error(label, "Output Error", "Missing analytics sections (scores/totals) in output.")
                  console.print("[red]KO[/red]")
