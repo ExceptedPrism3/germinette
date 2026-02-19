@@ -156,6 +156,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CODE NEXUS - DATA PROCESSOR FOUNDATION ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
@@ -208,6 +209,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CODE NEXUS - POLYMORPHIC STREAM SYSTEM ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
@@ -272,6 +274,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CODE NEXUS - ENTERPRISE PIPELINE SYSTEM ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")

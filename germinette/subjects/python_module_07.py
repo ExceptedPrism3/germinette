@@ -139,6 +139,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(os.path.dirname(path)) 
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             required = [
                 "=== DataDeck Card Foundation ===",
@@ -188,6 +189,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(os.path.dirname(path))
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             required = [
                 "=== DataDeck Deck Builder ===",
@@ -232,6 +234,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(os.path.dirname(path))
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             required = [
                 "=== DataDeck Ability System ===",
@@ -273,6 +276,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(os.path.dirname(path))
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             required = [
                 "=== DataDeck Game Engine ===",
@@ -314,6 +318,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(os.path.dirname(path))
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             required = [
                 "=== DataDeck Tournament Platform ===",

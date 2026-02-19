@@ -138,6 +138,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== Sacred Scroll Mastery ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
@@ -194,6 +195,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== Import Transmutation Mastery ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
@@ -243,6 +245,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
             
             if "=== Pathway Debate Mastery ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
@@ -287,6 +290,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
             
             if "=== Circular Curse Breaking ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")

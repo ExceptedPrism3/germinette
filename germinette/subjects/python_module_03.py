@@ -163,6 +163,7 @@ class Tester(BaseTester):
 
         # Test Case 1: No args
         out1 = self._run_script_args(path, [])
+        if self.check_for_crash(out1, exercise_label): return
         if "=== Command Quest ===" in out1 and "No arguments provided!" in out1:
             console.print("[green]OK (No Args)[/green]")
         else:
@@ -171,6 +172,7 @@ class Tester(BaseTester):
 
         # Test Case 2: Args
         out2 = self._run_script_args(path, ["hello", "world", "42"])
+        if self.check_for_crash(out2, exercise_label): return
         if "Arguments received: 3" in out2 and "Argument 1: hello" in out2:
             console.print("[green]OK (With Args)[/green]")
         else:
@@ -192,6 +194,7 @@ class Tester(BaseTester):
 
         # Test Case 1: Valid Scores
         out1 = self._run_script_args(path, ["1500", "2300", "1800", "2100", "1950"])
+        if self.check_for_crash(out1, exercise_label): return
         if "Average score: 1930.0" in out1 and "High score: 2300" in out1:
             console.print("[green]OK (Valid Scores)[/green]")
         else:
@@ -200,6 +203,7 @@ class Tester(BaseTester):
         
         # Test Case 2: No Scores
         out2 = self._run_script_args(path, [])
+        if self.check_for_crash(out2, exercise_label): return
         if "No scores provided" in out2:
              console.print("[green]OK (No Scores)[/green]")
         else:
@@ -227,6 +231,7 @@ class Tester(BaseTester):
         # "Parsing invalid coordinates..." suggests it demonstrates parsing internally.
         
         out = self._run_script_args(path, [])
+        if self.check_for_crash(out, exercise_label): return
         
         # Check specific headers and results
         if "=== Game Coordinate System ===" not in out:
@@ -255,6 +260,7 @@ class Tester(BaseTester):
         if not self.verify_strict(path, exercise_label, ["set", "len", "print"], allowed_imports=["sys"]): return
 
         out = self._run_script_args(path, [])
+        if self.check_for_crash(out, exercise_label): return
         
         if "=== Achievement Tracker System ===" not in out:
              console.print("[red]KO (Missing Header)[/red]")
@@ -289,6 +295,7 @@ class Tester(BaseTester):
         # Input: sword:1 potion:5 shield:2 armor:3 helmet:1
         args = ["sword:1", "potion:5", "shield:2", "armor:3", "helmet:1"]
         out = self._run_script_args(path, args)
+        if self.check_for_crash(out, exercise_label): return
         
         # 1. Header Checks
         headers = [
@@ -366,6 +373,7 @@ class Tester(BaseTester):
              return
 
         out = self._run_script_args(path, [])
+        if self.check_for_crash(out, exercise_label): return
         
         if "=== Game Data Stream Processor ===" not in out:
              console.print("[red]KO (Missing Header)[/red]")
@@ -392,6 +400,7 @@ class Tester(BaseTester):
         if not self.verify_strict(path, exercise_label, ["len", "print", "sum", "max", "min", "sorted"], allowed_imports=["sys"]): return
 
         out = self._run_script_args(path, [])
+        if self.check_for_crash(out, exercise_label): return
         
         if "=== Game Analytics Dashboard ===" not in out:
              console.print("[red]KO (Missing Header)[/red]")

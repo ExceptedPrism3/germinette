@@ -90,6 +90,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(path)
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "Virtual Environment: None detected" in out or "Outside the Matrix" in out:
                 console.print("[green]OK (Outside Detection)[/green]")
@@ -131,6 +132,7 @@ class Tester(BaseTester):
             cwd = os.path.dirname(path)
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
             
             # We look for some indication of status check, even if failing due to missing deps
             if "LOADING STATUS" in out or "Checking dependencies" in out:
@@ -175,7 +177,9 @@ class Tester(BaseTester):
             # But we need basic env vars.
             # Just run it.
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-            out = result.stdout
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
+
             if "ORACLE STATUS" in out:
                 console.print("[green]OK (Run)[/green]")
             else:

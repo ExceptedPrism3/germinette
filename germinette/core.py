@@ -213,6 +213,29 @@ class BaseTester:
         except Exception as e:
             return str(e)
 
+    def check_for_crash(self, output, label):
+        """
+        Checks if the script output contains runtime crash indicators.
+        Returns True if a crash is detected (and prints KO), False otherwise.
+        """
+        if "Traceback (most recent call last):" in output or \
+           "SyntaxError:" in output or \
+           "IndentationError:" in output or \
+           "AttributeError:" in output: # Added AttributeError explicitly for safety
+            
+            # If explicit "Runtime Error" is already recorded, maybe we don't need to duplicate?
+            # But this helper is meant to BE the check.
+            
+            # Simple heuristic: if these strings are present, it's a crash.
+            # Exceptions: If the exercise EXPECTS to print a traceback (Mod 02).
+            # We will handle Mod 02 specifically later if needed.
+            
+            # Capture the error message (last few lines usually)
+            self.record_error(label, "Runtime Error", f"Script crashed during execution:\n{output.strip()}")
+            console.print("[red]KO[/red]")
+            return True
+        return False
+
     def check_docstrings(self, path):
         """Checks if the module itself and all classes/functions have docstrings."""
         import ast

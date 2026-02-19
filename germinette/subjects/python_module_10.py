@@ -9,6 +9,7 @@ import ast
 import functools
 import operator
 import itertools
+import traceback
 from collections import OrderedDict
 
 console = Console()
@@ -207,7 +208,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Execution: {e})[/red]")
-             self.record_error(exercise_label, "Crash", str(e))
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_higher_realm(self):
         console.print("\n[bold]Testing Exercise 1: Higher Realm[/bold]")
@@ -272,6 +273,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Crash: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_memory_depths(self):
         console.print("\n[bold]Testing Exercise 2: Memory Depths[/bold]")
@@ -332,6 +334,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Crash: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_ancient_library(self):
         console.print("\n[bold]Testing Exercise 3: Ancient Library[/bold]")
@@ -392,6 +395,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Crash: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_masters_tower(self):
         console.print("\n[bold]Testing Exercise 4: Master's Tower[/bold]")
@@ -459,6 +463,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Crash: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def run(self, exercise_name=None):
         console.print("[bold magenta]Testing Module 10: FuncMage Chronicles[/bold magenta]")

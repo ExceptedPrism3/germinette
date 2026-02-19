@@ -5,6 +5,7 @@ from rich.panel import Panel
 import sys
 import os
 import importlib.util
+import traceback
 from datetime import datetime, date
 
 console = Console()
@@ -158,7 +159,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
-             self.record_error(exercise_label, "Execution Error", str(e))
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_alien_contact(self):
         console.print("\n[bold]Testing Exercise 1: Alien Contact Logs[/bold]")
@@ -237,7 +238,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
-             self.record_error(exercise_label, "Execution Error", str(e))
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_space_crew(self):
         console.print("\n[bold]Testing Exercise 2: Space Crew Management[/bold]")
@@ -309,7 +310,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
-             self.record_error(exercise_label, "Execution Error", str(e))
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def run(self, exercise_name=None):
         console.print("[bold purple]Testing Module 09: Cosmic Data[/bold purple]")
