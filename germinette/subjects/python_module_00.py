@@ -9,6 +9,7 @@ import os
 
 console = Console()
 import inspect
+import traceback
 
 class Tester(BaseTester):
     def __init__(self):
@@ -181,7 +182,7 @@ class Tester(BaseTester):
                 self.record_error(exercise_label, "Output Mismatch", msg)
         except Exception as e:
             console.print(f"[red]KO[/red]")
-            self.record_error(exercise_label, "Execution Error", str(e))
+            self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_plot_area(self):
         console.print("\n[bold]Testing Exercise 1: ft_plot_area[/bold]")
@@ -206,7 +207,7 @@ class Tester(BaseTester):
                     self.record_error(exercise_label, f"Failed Test Case (Input: {inputs})", f"Expected result: {expected_part}\nGot:\n{output}")
             except Exception as e:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, f"Execution Error (Input: {inputs})", str(e))
+                self.record_error(exercise_label, f"Runtime Error (Input: {inputs})", traceback.format_exc())
 
     def test_harvest_total(self):
         console.print("\n[bold]Testing Exercise 2: ft_harvest_total[/bold]")
@@ -231,7 +232,7 @@ class Tester(BaseTester):
                      self.record_error(exercise_label, f"Failed Test Case (Input: {inputs})", f"Expected 'Total harvest: {expected_sum}'\nGot:\n{output}")
             except Exception as e:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, f"Execution Error (Input: {inputs})", str(e))
+                self.record_error(exercise_label, f"Runtime Error (Input: {inputs})", traceback.format_exc())
 
     def test_plant_age(self):
         console.print("\n[bold]Testing Exercise 3: ft_plant_age[/bold]")
@@ -257,7 +258,7 @@ class Tester(BaseTester):
                      self.record_error(exercise_label, f"Failed Case (Input: {inp})", f"Input: {inp}\nExpected '{expected}'\nGot: {output}")
             except Exception as e:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, f"Execution Error (Input: {inp})", str(e))
+                self.record_error(exercise_label, f"Runtime Error (Input: {inp})", traceback.format_exc())
 
     def test_water_reminder(self):
         console.print("\n[bold]Testing Exercise 4: ft_water_reminder[/bold]")
@@ -282,7 +283,7 @@ class Tester(BaseTester):
                      self.record_error(exercise_label, f"Failed Case (Input: {inp})", f"Input: {inp}\nExpected '{expected}'\nGot: {output}")
             except Exception as e:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, f"Execution Error (Input: {inp})", str(e))
+                self.record_error(exercise_label, f"Runtime Error (Input: {inp})", traceback.format_exc())
 
     def test_count_harvest(self):
         console.print("\n[bold]Testing Exercise 5: ft_count_harvest[/bold]")
@@ -312,7 +313,7 @@ class Tester(BaseTester):
                         self.record_error(exercise_label, f"Iterative Failed (Input: {inp})", f"Missing lines: {missing}\nGot:\n{out}")
                 except Exception as e:
                      console.print(f"[red]Iterative KO[/red]")
-                     self.record_error(exercise_label, f"Iterative Error (Input: {inp})", str(e))
+                     self.record_error(exercise_label, f"Iterative Error (Input: {inp})", traceback.format_exc())
 
         func2 = self._load_func("ft_count_harvest_recursive", exercise_label)
         if func2:
@@ -336,7 +337,7 @@ class Tester(BaseTester):
                         self.record_error(exercise_label, f"Recursive Failed (Input: {inp})", f"Missing lines: {missing}\nGot:\n{out}")
                 except Exception as e:
                      console.print(f"[red]Recursive KO[/red]")
-                     self.record_error(exercise_label, f"Recursive Error (Input: {inp})", str(e))
+                     self.record_error(exercise_label, f"Recursive Error (Input: {inp})", traceback.format_exc())
 
     def test_garden_summary(self):
         console.print("\n[bold]Testing Exercise 6: ft_garden_summary[/bold]")
@@ -365,7 +366,7 @@ class Tester(BaseTester):
                    console.print(f"[green]OK ({inputs[0]})[/green]")
             except Exception as e:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, "Execution Error", str(e))
+                self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_seed_inventory(self):
         console.print("\n[bold]Testing Exercise 7: ft_seed_inventory[/bold]")
@@ -449,4 +450,4 @@ class Tester(BaseTester):
                     self.record_error(exercise_label, f"Failed Case ({args[2]})", error_msg)
             except Exception as e:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, "Execution Error", str(e))
+                self.record_error(exercise_label, "Runtime Error", traceback.format_exc())

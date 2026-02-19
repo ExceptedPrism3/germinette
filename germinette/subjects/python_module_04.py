@@ -162,6 +162,7 @@ class Tester(BaseTester):
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
             out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CYBER ARCHIVES - DATA RECOVERY SYSTEM ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
@@ -193,7 +194,8 @@ class Tester(BaseTester):
         try:
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            out = result.stdout
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CYBER ARCHIVES - PRESERVATION SYSTEM ===" not in out:
                  console.print("[red]KO (Missing Header)[/red]")
@@ -240,6 +242,8 @@ class Tester(BaseTester):
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             stdout, stderr = proc.communicate(input=input_str)
             
+            if self.check_for_crash(stdout + stderr, exercise_label): return
+
             if "=== CYBER ARCHIVES - COMMUNICATION SYSTEM ===" not in stdout:
                  console.print("[red]KO (Missing Header)[/red]")
                  return
@@ -287,7 +291,8 @@ class Tester(BaseTester):
         try:
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            out = result.stdout
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CYBER ARCHIVES - VAULT SECURITY SYSTEM ===" not in out:
                  console.print("[red]KO (Header)[/red]")
@@ -326,7 +331,8 @@ class Tester(BaseTester):
         try:
             cmd = [sys.executable, path]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            out = result.stdout
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
 
             if "=== CYBER ARCHIVES - CRISIS RESPONSE SYSTEM ===" not in out:
                  console.print("[red]KO (Header)[/red]")

@@ -226,6 +226,7 @@ class Tester(BaseTester):
 
         # STRICTNESS CHECK: Run as script
         output = self._run_script(path)
+        if self.check_for_crash(output, exercise_label): return
         if "Testing temperature" not in output or "Error:" not in output:
              console.print("[red]KO (Script Execution)[/red]")
              self.record_error(exercise_label, "Script Logic Error", "Running 'python3 ft_first_exception.py' did not produce expected output (Testing..., Error:...). Did you implement the test function?")
@@ -293,6 +294,7 @@ class Tester(BaseTester):
         # STRICTNESS CHECK: Script execution
         # The script usually runs a demo of all cases.
         output = self._run_script(path)
+        if self.check_for_crash(output, exercise_label): return
         required = ["ValueError", "ZeroDivisionError", "FileNotFoundError", "KeyError"]
         missing = [r for r in required if r not in output and r.lower() not in output.lower()]
         
@@ -353,6 +355,7 @@ class Tester(BaseTester):
 
         # STRICTNESS CHECK
         output = self._run_script(path)
+        if self.check_for_crash(output, exercise_label): return
         if "=== Custom Garden Errors Demo ===" not in output:
              console.print("[red]KO (Missing Header)[/red]")
              self.record_error(exercise_label, "Output Error", "Missing header: '=== Custom Garden Errors Demo ==='")
@@ -409,6 +412,7 @@ class Tester(BaseTester):
 
         # STRICTNESS CHECK
         output = self._run_script(path)
+        if self.check_for_crash(output, exercise_label): return
         if "=== Garden Watering System ===" not in output:
              console.print("[red]KO (Missing Header)[/red]")
              self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Watering System ==='")
@@ -465,6 +469,7 @@ class Tester(BaseTester):
              return
 
         output = self._run_script(path)
+        if self.check_for_crash(output, exercise_label): return
         if "=== Garden Plant Health Checker ===" not in output:
              console.print("[red]KO (Missing Header)[/red]")
              self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Plant Health Checker ==='")
@@ -521,6 +526,7 @@ class Tester(BaseTester):
              return
 
         output = self._run_script(path)
+        if self.check_for_crash(output, exercise_label): return
         if "=== Garden Management System ===" not in output:
              console.print("[red]KO (Missing Header)[/red]")
              self.record_error(exercise_label, "Output Error", "Missing header: '=== Garden Management System ==='")
