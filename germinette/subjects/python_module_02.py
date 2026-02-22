@@ -240,7 +240,7 @@ class Tester(BaseTester):
         if not mod: return
         
         # Strict checks
-        if not self.verify_strict(path, exercise_label, ["print", "open", "close"]): return
+        if not self.verify_strict(path, exercise_label, ["print", "open", "close", "int"]): return
         
         if not hasattr(mod, "garden_operations"):
             console.print("[red]KO[/red]")
@@ -314,7 +314,7 @@ class Tester(BaseTester):
         mod, path = self._load_module("ft_custom_errors", exercise_label)
         if not mod: return
 
-        if not self.verify_strict(path, exercise_label, ["print"]): return
+        if not self.verify_strict(path, exercise_label, ["print", "int", "input"]): return
 
         # Check classes
         classes = ["GardenError", "PlantError", "WaterError"]
@@ -371,7 +371,7 @@ class Tester(BaseTester):
         mod, path = self._load_module("ft_finally_block", exercise_label)
         if not mod: return
 
-        if not self.verify_strict(path, exercise_label, ["print"]): return
+        if not self.verify_strict(path, exercise_label, ["print", "int"]): return
         
         if not hasattr(mod, "water_plants"):
              self.record_error(exercise_label, "Missing Function", "water_plants not found")
@@ -428,7 +428,7 @@ class Tester(BaseTester):
         mod, path = self._load_module("ft_raise_errors", exercise_label)
         if not mod: return
 
-        if not self.verify_strict(path, exercise_label, ["print"]): return
+        if not self.verify_strict(path, exercise_label, ["print", "int"]): return
         
         if not hasattr(mod, "check_plant_health"):
              console.print("[red]KO[/red]")
@@ -485,7 +485,7 @@ class Tester(BaseTester):
         mod, path = self._load_module("ft_garden_management", exercise_label)
         if not mod: return
 
-        if not self.verify_strict(path, exercise_label, ["print"]): return
+        if not self.verify_strict(path, exercise_label, ["print", "int"]): return
         
         if not hasattr(mod, "GardenManager"):
             console.print("[red]KO (Missing Class)[/red]")
