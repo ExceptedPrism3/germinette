@@ -10,6 +10,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🌱 Installing Germinette...${NC}"
 
 # Install the package
+# Credit to @mauricelorenz (GitHub Issue #4) for suggesting the --home isolated installation feature!
 if [[ "$1" == "--home" ]]; then
     echo -e "${BLUE}🏠 Installing in isolated environment (--home)...${NC}"
     
@@ -35,6 +36,7 @@ if [[ "$1" == "--home" ]]; then
     
 else
     # Standard install logic
+    # Credit to @DayraN19 (GitHub Issue #6) for reporting the pip --user virtualenv crash!
     if [[ -n "$VIRTUAL_ENV" ]]; then
         echo -e "${BLUE}🐍 Virtual environment detected ($VIRTUAL_ENV). Installing without --user...${NC}"
         pip install .
