@@ -94,8 +94,9 @@ class Tester(BaseTester):
             "getattr", "setattr", "hasattr", "staticmethod", "classmethod", "property", "round"
         ]
         
+        # Credit to @mauricelorenz (GitHub Issue #7) for pointing out the missing 'time' import for Ex4!
         allowed_imports_base = ["sys", "os", "typing", "abc", "random", "datetime", 
-                                "functools", "operator", "itertools", "math", "collections"]
+                                "functools", "operator", "itertools", "math", "collections", "time"]
         if extra_imports:
              allowed_imports_base.extend(extra_imports)
 
