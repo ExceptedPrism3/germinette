@@ -308,6 +308,15 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Script Output Mismatch", f"Running script failed to verify: {missing}")
 
 
+    # Credit to @PeaceLow (GitHub Issue #5) for aligning the tester's expected inventory percentages and headers to accurately match the subject text!
+    def test_inventory_system(self):
+        console.print("\n[bold]Testing Exercise 4: ft_inventory_system[/bold]")
+        exercise_label = "Exercise 4"
+        mod, path = self._load_module("ft_inventory_system", exercise_label)
+        if not mod: return
+
+        if not self.verify_strict(path, exercise_label, ["print", "open", "close", "int"]): return
+
     def test_custom_errors(self):
         console.print("\n[bold]Testing Exercise 2: ft_custom_errors[/bold]")
         exercise_label = "Exercise 2"
