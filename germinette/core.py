@@ -299,6 +299,7 @@ class BaseTester:
         except Exception as e:
             return f"Error running flake8: {e}"
 
+    # Credit to @eloiberlinger1 (GitHub PR #3) for implementing mandatory type hint checks across module exercises!
     def check_type_hints(self, path):
         """Checks if all functions and methods have type hints (annotations)."""
         import ast

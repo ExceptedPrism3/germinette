@@ -368,6 +368,7 @@ class Tester(BaseTester):
                 console.print(f"[red]KO[/red]")
                 self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
+    # Credit to @eloiberlinger1 (GitHub PR #1) for adding exact match validation to detect unexpected content in ex07!
     def test_seed_inventory(self):
         console.print("\n[bold]Testing Exercise 7: ft_seed_inventory[/bold]")
         exercise_label = "Exercise 7"

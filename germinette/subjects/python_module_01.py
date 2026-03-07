@@ -99,6 +99,7 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Import Error", str(e))
             return None, None
 
+    # Credit to @eloiberlinger1 (GitHub PR #2) for improving Module 01 error handling and class/method validation!
     def test_garden_intro(self):
         console.print("\n[bold]Testing Exercise 0: ft_garden_intro[/bold]")
         label = "Exercise 0"
