@@ -104,10 +104,14 @@ class Tester(BaseTester):
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
              return None, None
-        
 
-            
-        return "FOUND", found_path 
+        type_hint_errors = self.check_type_hints(found_path)
+        if type_hint_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(exercise_label, "Style Error (Missing Type Hints)", type_hint_errors)
+             return None, None
+
+        return "FOUND", found_path
 
     def run(self, exercise_name=None):
         console.print("[bold cyan]Testing Module 04: Data Archivist[/bold cyan]")
@@ -127,6 +131,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             for _, func in self.exercises:
                 func()

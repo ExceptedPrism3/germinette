@@ -6,11 +6,7 @@ import sys
 import os
 import importlib.util
 import ast
-import functools
-import operator
-import itertools
 import traceback
-from collections import OrderedDict
 
 console = Console()
 
@@ -100,15 +96,18 @@ class Tester(BaseTester):
         if extra_imports:
              allowed_imports_base.extend(extra_imports)
 
-        # Strict Type Hints - MANDATORY
+        style_errors = self.check_flake8(path)
+        if style_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(label, "Style Error (Flake8)", style_errors)
+             return False
+
         type_errors = self.check_type_hints(path)
         if type_errors:
              console.print("[red]KO (Type Hints)[/red]")
              self.record_error(label, "Style Error (Missing Type Hints)", type_errors)
              return False
-        
-        # Docstrings explicitly NOT required by user
-        
+
         return self.verify_strict(path, label, allowed_funcs, allowed_imports_base, enforce_try_except=False)
 
     def check_lambda_usage(self, path, required_count=1):
@@ -123,19 +122,8 @@ class Tester(BaseTester):
                     lambda_count += 1
             
             return lambda_count
-        except:
+        except Exception:
             return 0
-
-    def check_no_def_in_ex0(self, path):
-        """Checks if 'def' is used (forbidden in Ex0 except for the main test functions signatures?).
-           Wait, subject says: 'Do not use the def keyword to create named functions for simple operations.'
-           But we must define the required functions: artifact_sorter, etc.
-           So 'def' IS required for the top-level functions.
-           Inside them? misuse of def?
-           The instruction is ambiguous: 'Do not use def... to create named functions for simple operations.'
-           Likely means: use lambdas inside the main functions.
-        """
-        pass
 
     # --- Tests ---
 
@@ -352,12 +340,23 @@ class Tester(BaseTester):
             # 1. Reducer
             if hasattr(mod, 'spell_reducer'):
                 vals = [1, 2, 3, 4]
-                s = mod.spell_reducer(vals, "add") # 10
-                m = mod.spell_reducer(vals, "multiply") # 24
+                s = mod.spell_reducer(vals, "add")  # 10
+                m = mod.spell_reducer(vals, "multiply")  # 24
                 if s == 10 and m == 24:
                      console.print("[green]OK (Reducer)[/green]")
                 else:
                      console.print("[red]KO (Reducer)[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         f"spell_reducer expected add=10, multiply=24; got {s=}, {m=}.",
+                     )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "spell_reducer not found",
+                )
 
             # 2. Partial
             if hasattr(mod, 'partial_enchanter'):
@@ -366,22 +365,40 @@ class Tester(BaseTester):
                 
                 parts = mod.partial_enchanter(base)
                 if 'fire_enchant' in parts:
-                    res = parts['fire_enchant'](target="Sword")
-                    # Should implicitly have power=50, element='fire' (or whatever logic user implements)
-                    # We check stricter if we can, but let's assume valid partial usage.
+                    parts['fire_enchant'](target="Sword")
                     console.print("[green]OK (Partial)[/green]")
+                else:
+                    console.print("[red]KO (Partial)[/red]")
+                    self.record_error(
+                        exercise_label,
+                        "Logic Error",
+                        "partial_enchanter must return dict with 'fire_enchant' key.",
+                    )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "partial_enchanter not found",
+                )
 
             # 3. Memoized Fib
             if hasattr(mod, 'memoized_fibonacci'):
-                # Check performance or simple result
-                import time
-                start = time.time()
                 v1 = mod.memoized_fibonacci(30)
-                end = time.time()
                 if v1 == 832040:
                      console.print(f"[green]OK (Fibonacci)[/green]")
                 else:
                      console.print(f"[red]KO (Fibonacci: {v1})[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         f"memoized_fibonacci(30) should be 832040, got {v1}.",
+                     )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "memoized_fibonacci not found",
+                )
 
             # 4. Dispatcher
             if hasattr(mod, 'spell_dispatcher'):
@@ -393,6 +410,12 @@ class Tester(BaseTester):
                 d("spell")
                 d([1, 2])
                 console.print("[green]OK (Dispatcher)[/green]")
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "spell_dispatcher not found",
+                )
 
         except Exception as e:
              console.print(f"[red]KO (Crash: {e})[/red]")
@@ -421,6 +444,17 @@ class Tester(BaseTester):
                      console.print("[green]OK (Timer)[/green]")
                 else:
                      console.print("[red]KO (Timer)[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         f"spell_timer wrapper should return func result; got {res!r}.",
+                     )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "spell_timer not found",
+                )
 
             # 2. Power Validator
             if hasattr(mod, 'power_validator'):
@@ -432,6 +466,17 @@ class Tester(BaseTester):
                      console.print("[green]OK (Validator)[/green]")
                 else:
                      console.print("[red]KO (Validator)[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         "power_validator should allow power>=10 and reject lower.",
+                     )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "power_validator not found",
+                )
             
             # 3. Retry
             if hasattr(mod, 'retry_spell'):
@@ -449,18 +494,49 @@ class Tester(BaseTester):
                      console.print("[green]OK (Retry)[/green]")
                 else:
                      console.print("[red]KO (Retry)[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         f"retry_spell expected Success after 3 tries; got {res=}, {len(msg)=}.",
+                     )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Function",
+                    "retry_spell not found",
+                )
 
             # 4. MageGuild
             if hasattr(mod, 'MageGuild'):
                 mg = mod.MageGuild()
                 if mod.MageGuild.validate_mage_name("Gandalf") and not mod.MageGuild.validate_mage_name("A"):
                      console.print("[green]OK (StaticMethod)[/green]")
+                else:
+                     console.print("[red]KO (StaticMethod)[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         "MageGuild.validate_mage_name should accept Gandalf and reject short names.",
+                     )
                 
                 res = mg.cast_spell("Fire", 15)
                 fail = mg.cast_spell("Fire", 5)
                 
                 if "Successfully" in res and "Insufficient" in fail:
                      console.print("[green]OK (Class Method)[/green]")
+                else:
+                     console.print("[red]KO (Class Method)[/red]")
+                     self.record_error(
+                         exercise_label,
+                         "Logic Error",
+                         f"cast_spell power check failed: ok={res!r}, low={fail!r}.",
+                     )
+            else:
+                self.record_error(
+                    exercise_label,
+                    "Missing Class",
+                    "MageGuild not found",
+                )
 
         except Exception as e:
              console.print(f"[red]KO (Crash: {e})[/red]")
@@ -481,6 +557,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             visited = set()
             for name, func in self.exercises:

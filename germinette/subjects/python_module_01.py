@@ -28,7 +28,7 @@ class Tester(BaseTester):
         self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def run(self, exercise_name=None):
-        console.print("[bold blue]Testing Module 01: Garden Object Oriented Programming (v18)[/bold blue]")
+        console.print("[bold blue]Testing Module 01: CodeCultivation (v2.2)[/bold blue]")
         
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
@@ -42,6 +42,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             for _, func in self.exercises:
                 func()
@@ -91,8 +96,12 @@ class Tester(BaseTester):
                  self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
                  return None, None
 
+            type_hint_errors = self.check_type_hints(found_path)
+            if type_hint_errors:
+                 console.print("[red]KO[/red]")
+                 self.record_error(exercise_label, "Style Error (Missing Type Hints)", type_hint_errors)
+                 return None, None
 
-            
             return mod, found_path
         except Exception as e:
             console.print("[red]KO (Import Error)[/red]")
@@ -160,17 +169,15 @@ class Tester(BaseTester):
 
             p = Plant("Bamboo", 100, 10)
             
-            # PDF v18 Strict Requirements: grow(), age()
-            # PDF v18: Methods not strictly named, just functionality via simulation.
-            # missing = []
-            # if not hasattr(p, 'grow'): missing.append('grow')
-            # if not hasattr(p, 'age'): missing.append('age')
-            # if not hasattr(p, 'get_info'): missing.append('get_info')
-            
-            # if missing:
-            #     self.record_error(label, "Missing Methods", f"Missing required methods: {', '.join(missing)}")
-            #     console.print("[red]KO[/red]")
-            #     return
+            missing = []
+            if not hasattr(p, 'grow'): missing.append('grow')
+            if not hasattr(p, 'age'): missing.append('age')
+            if not hasattr(p, 'get_info'): missing.append('get_info')
+
+            if missing:
+                self.record_error(label, "Missing Methods", f"Missing required methods: {', '.join(missing)}")
+                console.print("[red]KO[/red]")
+                return
 
             # Check output for "=== Day 7 ===" simulation
             output = self._run_script(path)
@@ -204,11 +211,10 @@ class Tester(BaseTester):
                      console.print("[red]KO[/red]")
                      return
             
-            # PDF does not strictly enforce 5 instances.
-            # if output.count("Created:") < 5:
-            #      self.record_error(label, "Logic Error", "Expected at least 5 plants to be created.")
-            #      console.print("[red]KO[/red]")
-            #      return
+            if output.count("Created:") < 5:
+                 self.record_error(label, "Logic Error", "Expected at least 5 plants to be created.")
+                 console.print("[red]KO[/red]")
+                 return
 
             console.print("[green]OK[/green]")
         except Exception as e:
@@ -230,7 +236,7 @@ class Tester(BaseTester):
 
             # Check Strict Methods (Getters not required)
             p = SecurePlant("Test", 10, 1)
-            req_methods = ['set_height', 'set_age'] # , 'get_height', 'get_age'
+            req_methods = ['set_height', 'set_age', 'get_height', 'get_age']
             missing = [m for m in req_methods if not hasattr(p, m)]
             
             if missing:
@@ -273,10 +279,10 @@ class Tester(BaseTester):
             f = Flower("Test", 1, 1, "Red")
             t = Tree("Test", 100, 10, 50)
             
-            # if not hasattr(f, 'bloom'):
-            #      self.record_error(label, "Missing Method", "Flower missing 'bloom()'")
-            #      console.print("[red]KO[/red]")
-            #      return
+            if not hasattr(f, 'bloom'):
+                 self.record_error(label, "Missing Method", "Flower missing 'bloom()'")
+                 console.print("[red]KO[/red]")
+                 return
             if not hasattr(t, 'produce_shade'):
                  self.record_error(label, "Missing Method", "Tree missing 'produce_shade()'")
                  console.print("[red]KO[/red]")

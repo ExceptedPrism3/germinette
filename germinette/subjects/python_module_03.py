@@ -104,6 +104,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             for _, func in self.exercises:
                 func()
@@ -287,8 +292,9 @@ class Tester(BaseTester):
 
         # Strict Checks (Ex4: dict, len, print...) and sys/sys.argv used for input
         # Subject says "dict methods like keys(), values(), items(), get(), update()"
+        # sum/max/min for totals and most/least abundant; list for views/copies; int/sorted for parsing & ordering
         if not self.verify_strict(path, exercise_label, 
-                                  ["dict", "len", "print", "keys", "values", "items", "get", "update", "int", "sorted"], 
+                                  ["dict", "len", "print", "keys", "values", "items", "get", "update", "int", "sorted", "sum", "max", "min", "list"], 
                                   allowed_imports=["sys"]): return
 
         # Test Case: Defined in Subject
@@ -352,24 +358,9 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_data_stream", exercise_label)
         if not status: return
 
-        # Strict Checks (Ex5: next, iter, range, len, print)
-        if not self.verify_strict(path, exercise_label, ["next", "iter", "range", "len", "print"], allowed_imports=["sys", "time", "random"]): 
-             # Note: Ex5 sample generator output mentions "Processing time" and "random" events?
-             # PDF Ex5: "Authorized: next(), iter(), range(), len(), print()".
-             # It actsuate does NOT authorize 'time' or 'random'.
-             # But the example output shows "Processing time: 0.045 seconds".
-             # To measure time, one usually needs 'time' module.
-             # BUT "Authorized" list is strict.
-             # Maybe the processing time is just a mock print in example? 
-             # Or maybe 'time' is part of the system or implicit?
-             # Subject PDF: "only sys import is allowed...".
-             # So 'time' is FORBIDDEN.
-             # The example output might be from the *tester* or the student Mock?
-             # "Example Output... $> python3 ft_data_stream.py".
-             # If student code prints time, they must use time module.
-             # But if it's forbidden, they must not.
-             # I will stick to Strict: Only sys. If they mock it with print, fine.
-             # Wait, Ex5 allowed imports: `sys`.
+        if not self.verify_strict(path, exercise_label,
+                                  ["next", "iter", "range", "len", "print"],
+                                  allowed_imports=["sys", "typing"]):
              return
 
         out = self._run_script_args(path, [])

@@ -67,7 +67,14 @@ class Tester(BaseTester):
         exercises_to_run = self.exercises
         if exercise_name:
             exercises_to_run = [ex for ex in self.exercises if ex[0] == exercise_name]
-            
+            if not exercises_to_run:
+                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
+
         for _, test_func in exercises_to_run:
             test_func()
             
@@ -225,6 +232,8 @@ class Tester(BaseTester):
              console.print(f"[red]KO (Execution Error: {e})[/red]")
 
     def test_pathway_debate(self):
+        # Credit to @IntRogerYT (GitHub Issue #8) for reporting outdated exact-match on
+        # philosophers_stone() output (subject allows longer lines and typographic apostrophes).
         console.print("\n[bold]Testing Exercise 2: ft_pathway_debate[/bold]")
         exercise_label = "Exercise 2"
         status, path = self._load_module("ft_pathway_debate", exercise_label)
@@ -257,12 +266,14 @@ class Tester(BaseTester):
                 "lead_to_gold(): Lead transmuted to gold",
                 "stone_to_gem(): Stone transmuted to gem",
                 "Testing Relative Imports (from advanced.py)",
-                "philosophers_stone(): Philosopher's stone created",
                 "Testing Package Access",
                 "Both pathways work!"
             ]
-            
+
             missing = [r for r in required if r not in out]
+            # philosophers_stone(): allow extended description per subject; accept ASCII or Unicode apostrophe
+            if "philosophers_stone():" not in out or "stone created" not in out.lower():
+                missing.append("philosophers_stone(): … stone created (extended output OK, see Issue #8)")
             if not missing:
                 console.print("[green]OK[/green]")
             else:

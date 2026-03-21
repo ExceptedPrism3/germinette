@@ -175,9 +175,46 @@ python_module_00/
 
 ---
 
+## 🧪 Maintainer: integration tests
+
+Regression check for the **Module 07** tester (golden reference under `tests/fixtures/python_module_07_golden/`):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python3 -m pip install -e ".[dev]"
+python3 -m pytest tests/test_integration_module07.py -v
+```
+
+**If you see `No module named pytest` after `pip install`:** your shell may be using a different `python` than the venv’s (common with **Conda `base` + venv**). Fix one of these:
+
+- Prefer **`python3 -m pip`** and **`python3 -m pytest`** (same interpreter as `python3` in the venv), or  
+- Run explicitly: **`.venv/bin/python -m pytest tests/test_integration_module07.py -v`**, or  
+- **`conda deactivate`** then activate only `.venv`.
+
+Avoid `pip install -r .[dev]` — extras belong in quotes: `pip install -e ".[dev]"`.
+
+CI runs the same on push/PR (see `.github/workflows/ci.yml`).
+
+---
+
 ## 🛡️ License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## ⚡️ Version — **read this before you debug “wrong KO”**
+
+| | |
+| :--- | :--- |
+| **Latest release (this tree)** | **`v1.6.8`** |
+| **Update installed Germinette** | `germinette -u` |
+| **All changes by version** | **[CHANGELOG.md](CHANGELOG.md)** |
+
+> **If you installed months ago or from a fork**, you may be on an old tester. Update first — many “bugs” are already fixed in a newer release.
+
+After each run, the CLI prints a **Disclaimer** panel, then a **version** line at the very end (or a **yellow “update available”** panel if GitHub is newer). If every exercise in that run passed with no recorded errors, a green **“All exercises passed”** panel appears **above** the disclaimer.
 
 ---
 
