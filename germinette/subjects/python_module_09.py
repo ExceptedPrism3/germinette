@@ -84,7 +84,12 @@ class Tester(BaseTester):
         if extra_imports:
              allowed_imports_base.extend(extra_imports)
 
-        # Strict Type Hints
+        style_errors = self.check_flake8(path)
+        if style_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(label, "Style Error (Flake8)", style_errors)
+             return False
+
         type_errors = self.check_type_hints(path)
         if type_errors:
              console.print("[red]KO (Type Hints)[/red]")
@@ -233,7 +238,40 @@ class Tester(BaseTester):
                  console.print("[red]KO[/red]")
                  return
              except: pass
-             
+
+             # 3. Physical contact must be verified
+             try:
+                 AlienContact(
+                      contact_id="AC_PHYS",
+                      timestamp=datetime.now(),
+                      location="Loc",
+                      contact_type=ContactType.physical,
+                      signal_strength=5.0,
+                      duration_minutes=10,
+                      witness_count=5,
+                      is_verified=False
+                 )
+                 self.record_error(exercise_label, "Logic Error", "Allowed physical contact without verification")
+                 console.print("[red]KO[/red]")
+                 return
+             except: pass
+
+             # 4. Strong signal (> 7.0) must include received message
+             try:
+                 AlienContact(
+                      contact_id="AC_SIG",
+                      timestamp=datetime.now(),
+                      location="Loc",
+                      contact_type=ContactType.radio,
+                      signal_strength=8.5,
+                      duration_minutes=10,
+                      witness_count=1
+                 )
+                 self.record_error(exercise_label, "Logic Error", "Allowed strong signal (> 7.0) without received message")
+                 console.print("[red]KO[/red]")
+                 return
+             except: pass
+
              console.print("[green]OK[/green]")
 
         except Exception as e:
@@ -306,6 +344,51 @@ class Tester(BaseTester):
                  return
              except: pass
 
+             # Invalid Mission: Long mission without 50% experienced crew
+             cadet1 = CrewMember(
+                 member_id="CM003", name="Newbie1", rank=Rank.cadet,
+                 age=20, specialization="Science", years_experience=1
+             )
+             cadet2 = CrewMember(
+                 member_id="CM004", name="Newbie2", rank=Rank.cadet,
+                 age=21, specialization="Engineering", years_experience=2
+             )
+             try:
+                 SpaceMission(
+                     mission_id="M2025_LONG",
+                     mission_name="Long Mission",
+                     destination="Jupiter",
+                     launch_date=datetime.now(),
+                     duration_days=400,
+                     crew=[cmdr, cadet1, cadet2],
+                     budget_millions=500.0
+                 )
+                 self.record_error(exercise_label, "Logic Error", "Allowed long mission (> 365 days) without 50% experienced crew")
+                 console.print("[red]KO[/red]")
+                 return
+             except: pass
+
+             # Invalid Mission: Inactive crew member
+             inactive = CrewMember(
+                 member_id="CM005", name="Retired", rank=Rank.captain,
+                 age=55, specialization="Command", years_experience=25,
+                 is_active=False
+             )
+             try:
+                 SpaceMission(
+                     mission_id="M2025_ACT",
+                     mission_name="Active Check",
+                     destination="Moon",
+                     launch_date=datetime.now(),
+                     duration_days=30,
+                     crew=[inactive],
+                     budget_millions=100.0
+                 )
+                 self.record_error(exercise_label, "Logic Error", "Allowed mission with inactive crew member")
+                 console.print("[red]KO[/red]")
+                 return
+             except: pass
+
              console.print("[green]OK[/green]")
 
         except Exception as e:
@@ -328,6 +411,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             visited = set()
             for name, func in self.exercises:

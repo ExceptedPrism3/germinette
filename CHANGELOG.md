@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.6.8] - 2026-03-19
+### Added
+- **Integration tests**: Golden reference project for Module 07 under `tests/fixtures/python_module_07_golden/` and `tests/test_integration_module07.py`.
+- **CI**: GitHub Actions workflow (`.github/workflows/ci.yml`) runs Module 07 integration tests on Python 3.10 and 3.12.
+- **Developer install**: `pip install -e ".[dev]"` extra in `setup.py` (includes `pytest`).
+
+### Fixed
+- **`install.sh`**: If `pip` exits non-zero after a successful install (e.g. **pyenv** cannot rehash shims), verify the package and continue with a warning instead of failing (Issue **#9**, thanks **@GayaOliveira**).
+- **`germinette.core`**: `check_imports` now allows `from __future__ import annotations` (standard library).
+- **Module 06**: `ft_pathway_debate` output check accepts longer `philosophers_stone()` lines and typographic apostrophes (Issue **#8**, thanks **@IntRogerYT**).
+
+### Changed
+- **Module 07 tester**: Repository root `__init__.py` is required (recorded error, not only a warning); flake8/type-hint/strict checks run on all primary `.py` files per exercise (including `main.py`, `__init__.py`, Ex1 `SpellCard`/`ArtifactCard`, Ex2 `Combatable`/`Magical`, etc.).
+- **README**: Maintainer section for integration tests; Conda/venv `python` vs `pip` troubleshooting; **version & update** block at the end of the file.
+- **CLI**: Footer order: (if **no errors**) green **“All exercises passed”** panel → red **Disclaimer** → **version** / update line last. Unknown `-e` / exercise name now records an error so a false “all passed” is not shown. **A-Maze-ing** KO paths now use `record_error` + grouped report.
+- **CLI**: End-of-run footer uses GitHub `main` to decide: **yellow “update available” panel** only when a newer version exists; otherwise a dim **“up to date”** line (or offline hint). `check_update()` now returns `(needs_update, remote_version, check_ok)`; `germinette -u` no longer claims “latest” when the version check failed (e.g. offline).
+
+### Fixed (follow-up)
+- **Module 03 Exercise 4** (`ft_inventory_system`): authorized **`sum`**, **`max`**, **`min`**, **`list`** alongside dict-centric builtins for typical inventory reports.
+
+### Notes (tester alignment, earlier in this release cycle)
+- Stricter alignment with subjects across modules **00–10** (e.g. type hints / flake8 where required, Module 09 Pydantic rules, Module 03 Ex5 imports, Module 00 plant-age boundary, Module 01 CodeCultivation checks and banner).
+
 ## [1.6.5] - 2026-02-07
 ### Fixed
 - **Installation**: `install.sh` now detects active virtual environments (`$VIRTUAL_ENV`) and installs without `--user` flag to avoid errors (Issue #6).

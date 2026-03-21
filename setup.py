@@ -21,5 +21,10 @@ setup(
         "rich",  # For pretty output
         "flake8", # Linter
     ],
+    extras_require={
+        "dev": [
+            "pytest>=8",
+        ],
+    },
     python_requires=">=3.10",
 )

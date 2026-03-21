@@ -1,3 +1,13 @@
+"""
+Module 07 (DataDeck) tester.
+
+Recommendations / future hardening (not all implemented here):
+  - Normalize expected output checks (allow minor formatting / repr differences).
+  - Optionally require each exN/__init__.py to exist and re-export the public API.
+  - If false positives appear, tune verify_strict allowed_imports per file (e.g. ex4 only).
+  - Document that students must run germinette from the repo root (parent of ex0/).
+  - Golden regression tree: tests/fixtures/python_module_07_golden/ (see tests/test_integration_module07.py).
+"""
 import sys
 import os
 import ast
@@ -53,6 +63,16 @@ class Tester(BaseTester):
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
 
+        root_init = os.path.join(os.getcwd(), "__init__.py")
+        if not os.path.exists(root_init):
+            console.print("[red]KO[/red] Missing __init__.py at repository root (required by subject).")
+            self.record_error(
+                "Module 07 (repository layout)",
+                "Missing File",
+                "The subject requires __init__.py at the repository root so exercises are "
+                "packages and absolute imports work (e.g. from ex0.Card import Card).",
+            )
+
         if exercise_name:
             found = False
             for name, func in self.exercises:
@@ -62,6 +82,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             for _, func in self.exercises:
                 func()
@@ -89,6 +114,20 @@ class Tester(BaseTester):
         if extra_imports:
             allowed_imports.extend(extra_imports)
 
+        style_errors = self.check_flake8(path)
+        if style_errors:
+             console.print("[red]KO[/red]")
+             # Filename is included in the string returned by check_flake8()
+             self.record_error(label, "Style Error (Flake8)", style_errors)
+             return False
+
+        file_prefix = f"[bold cyan]File:[/bold cyan] [cyan]{os.path.basename(path)}[/cyan]\n\n"
+        type_errors = self.check_type_hints(path)
+        if type_errors:
+             console.print("[red]KO (Type Hints)[/red]")
+             self.record_error(label, "Style Error (Missing Type Hints)", file_prefix + type_errors)
+             return False
+
         return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=enforce_try_except)
 
     def check_abc_inheritance(self, file_path, class_name, abc_name="ABC"):
@@ -106,6 +145,22 @@ class Tester(BaseTester):
         except:
             return False
 
+    def _strict_check_exercise_py_files(
+        self,
+        exercise_label: str,
+        ex_dir: str,
+        py_files: list,
+        extra_imports: list | None = None,
+    ) -> bool:
+        """Run flake8, type hints, and verify_strict on each listed file if it exists."""
+        extra = list(extra_imports) if extra_imports else []
+        for fname in py_files:
+            fp = os.path.join(ex_dir, fname)
+            if os.path.exists(fp):
+                if not self.common_strict_check(fp, exercise_label, extra_imports=extra):
+                    return False
+        return True
+
     # --- Exercise Tests ---
 
     def test_card_foundation(self):
@@ -118,19 +173,26 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing File", "Could not find ex0/main.py")
             return
 
-        # Check strictness on Card.py if exists
-        card_py = os.path.join(os.path.dirname(path), "Card.py")
+        ex0_dir = os.path.dirname(path)
+
+        # Card.py: ABC + strictness (subject: Card is abstract base)
+        card_py = os.path.join(ex0_dir, "Card.py")
         if os.path.exists(card_py):
-            if not self.common_strict_check(card_py, exercise_label): return
+            if not self.common_strict_check(card_py, exercise_label):
+                return
             if not self.check_abc_inheritance(card_py, "Card", "ABC"):
                 console.print("[red]KO (Structure Error)[/red]")
                 self.record_error(exercise_label, "Structure Error", "Card class must inherit from ABC")
                 return
 
-        # Check CreatureCard strictness
-        creature_py = os.path.join(os.path.dirname(path), "CreatureCard.py")
-        if os.path.exists(creature_py):
-            if not self.common_strict_check(creature_py, exercise_label): return
+        # Other submitted modules: flake8, type hints, imports (aligns with subject file list)
+        if not self._strict_check_exercise_py_files(
+            exercise_label,
+            ex0_dir,
+            ["CreatureCard.py", "main.py", "__init__.py"],
+            extra_imports=["ex0"],
+        ):
+            return
 
         import subprocess
         try:
@@ -177,11 +239,14 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing File", "Could not find ex1/main.py")
             return
 
-        # Check Deck.py strictness
-        deck_py = os.path.join(os.path.dirname(path), "Deck.py")
-        if os.path.exists(deck_py):
-            # random is allowed
-            if not self.common_strict_check(deck_py, exercise_label, extra_imports=["ex0"]): return
+        ex1_dir = os.path.dirname(path)
+        if not self._strict_check_exercise_py_files(
+            exercise_label,
+            ex1_dir,
+            ["SpellCard.py", "ArtifactCard.py", "Deck.py", "main.py", "__init__.py"],
+            extra_imports=["ex0"],
+        ):
+            return
 
         import subprocess
         try:
@@ -223,10 +288,14 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing File", "Could not find ex2/main.py")
             return
 
-        # Check EliteCard.py strictness
-        elite_py = os.path.join(os.path.dirname(path), "EliteCard.py")
-        if os.path.exists(elite_py):
-            if not self.common_strict_check(elite_py, exercise_label, extra_imports=["ex0"]): return
+        ex2_dir = os.path.dirname(path)
+        if not self._strict_check_exercise_py_files(
+            exercise_label,
+            ex2_dir,
+            ["Combatable.py", "Magical.py", "EliteCard.py", "main.py", "__init__.py"],
+            extra_imports=["ex0", "ex1"],
+        ):
+            return
 
         import subprocess
         try:
@@ -270,6 +339,15 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing File", "Could not find ex3/main.py")
             return
 
+        ex3_dir = os.path.dirname(path)
+        if not self._strict_check_exercise_py_files(
+            exercise_label,
+            ex3_dir,
+            ["GameStrategy.py", "CardFactory.py", "main.py", "__init__.py"],
+            extra_imports=["ex0", "ex1"],
+        ):
+            return
+
         import subprocess
         try:
             cmd = [sys.executable, "-m", "ex3.main"]
@@ -310,6 +388,21 @@ class Tester(BaseTester):
         if not path or not os.path.exists(path):
             console.print("[red]KO (Missing File)[/red]")
             self.record_error(exercise_label, "Missing File", "Could not find ex4/main.py")
+            return
+
+        ex4_dir = os.path.dirname(path)
+        if not self._strict_check_exercise_py_files(
+            exercise_label,
+            ex4_dir,
+            [
+                "Rankable.py",
+                "TournamentCard.py",
+                "TournamentPlatform.py",
+                "main.py",
+                "__init__.py",
+            ],
+            extra_imports=["ex0", "ex1", "ex2", "ex3"],
+        ):
             return
 
         import subprocess

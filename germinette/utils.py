@@ -1,4 +1,5 @@
 import sys
+import os
 import io
 import contextlib
 import urllib.request
@@ -69,29 +70,48 @@ class IOTester:
 
 def check_update(current_version):
     """
-    Checks if a newer version is available on GitHub.
-    Returns (update_avaiable: bool, remote_version: str).
+    Checks if a newer version is available on GitHub main.
+
+    For local UI testing without depending on what is published, set:
+        GERMINETTE_DEBUG_REMOTE_VERSION=1.6.8
+    (compared against the real or GERMINETTE_FORCE_VERSION current version).
+
+    Returns:
+        tuple: (needs_update: bool, remote_version: str | None, check_ok: bool)
+        - needs_update: True if remote on GitHub is strictly newer than current_version.
+        - remote_version: Parsed __version__ from GitHub when check_ok else None.
+        - check_ok: True if the version string was fetched and parsed successfully.
     """
+    def parse_v(v):
+        return tuple(map(int, v.split(".")))
+
+    debug_remote = os.environ.get("GERMINETTE_DEBUG_REMOTE_VERSION", "").strip()
+    if debug_remote:
+        try:
+            if debug_remote != current_version and parse_v(debug_remote) > parse_v(current_version):
+                return True, debug_remote, True
+            return False, debug_remote, True
+        except ValueError:
+            return False, None, False
+
     url = "https://raw.githubusercontent.com/ExceptedPrism3/germinette/main/germinette/__init__.py"
+
     try:
         # Set timeout to 2 seconds to not block startup
         with urllib.request.urlopen(url, timeout=2) as response:
-            content = response.read().decode('utf-8')
-            
+            content = response.read().decode("utf-8")
+
         # Regex to find __version__ = "1.0.0"
         match = re.search(r'__version__\s*=\s*"(.*?)"', content)
-        if match:
-            remote_version = match.group(1)
-            # Simple string verify (1.0.1 > 1.0.0 works for semantic versioning usually)
-            # Ideally we'd use packaging.version, but we want to minimize deps or imports.
-            if remote_version != current_version:
-                 # Check if remote is actually 'newer'
-                 # Split by . and compare integers tuple
-                 def parse_v(v): return tuple(map(int, v.split('.')))
-                 
-                 if parse_v(remote_version) > parse_v(current_version):
-                     return True, remote_version
+        if not match:
+            return False, None, False
+
+        remote_version = match.group(1)
+        if remote_version != current_version:
+            if parse_v(remote_version) > parse_v(current_version):
+                return True, remote_version, True
+        return False, remote_version, True
     except Exception:
-        pass # Fail silently if network/parsing fails
-    
-    return False, None
+        pass  # Network / parse failure
+
+    return False, None, False

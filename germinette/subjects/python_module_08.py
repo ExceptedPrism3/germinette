@@ -1,6 +1,5 @@
 import sys
 import os
-import ast
 import subprocess
 from rich.console import Console
 from rich.panel import Panel
@@ -60,8 +59,12 @@ class Tester(BaseTester):
         if extra_imports:
             allowed_imports.extend(extra_imports)
 
-        # Note: We enforce try/except loosely, or strict? 
-        # Strict Type Hints
+        style_errors = self.check_flake8(path)
+        if style_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(label, "Style Error (Flake8)", style_errors)
+             return False
+
         type_errors = self.check_type_hints(path)
         if type_errors:
              console.print("[red]KO (Type Hints)[/red]")
@@ -120,6 +123,8 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Missing File", "Missing requirements.txt")
         if not os.path.exists(pyproject):
             self.record_error(exercise_label, "Missing File", "Missing pyproject.toml")
+        if not os.path.exists(requirements) or not os.path.exists(pyproject):
+            return
 
         # Strict Check
         allowed_imports = ["pandas", "requests", "matplotlib", "numpy", "importlib", "time"]
@@ -135,11 +140,37 @@ class Tester(BaseTester):
             if self.check_for_crash(out, exercise_label): return
             
             # We look for some indication of status check, even if failing due to missing deps
-            if "LOADING STATUS" in out or "Checking dependencies" in out:
-                console.print("[green]OK[/green]")
-            else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Output doesn't match expected structure. Got:\n{out}")
+            if "LOADING STATUS" not in out and "Checking dependencies" not in out:
+                console.print("[red]KO (Output Mismatch)[/red]")
+                self.record_error(
+                    exercise_label,
+                    "Output Error",
+                    f"Output doesn't match expected structure. Got:\n{out}",
+                )
+                return
+
+            # Subject: matplotlib visualization written to matrix_analysis.png
+            if "Results saved to: matrix_analysis.png" in out:
+                png_path = os.path.join(cwd, "matrix_analysis.png")
+                if not os.path.isfile(png_path):
+                    console.print("[red]KO (Missing PNG)[/red]")
+                    self.record_error(
+                        exercise_label,
+                        "Output Error",
+                        "Output claims results were saved to matrix_analysis.png, "
+                        "but that file was not created next to loading.py.",
+                    )
+                    return
+                if os.path.getsize(png_path) < 64:
+                    console.print("[red]KO (Invalid PNG)[/red]")
+                    self.record_error(
+                        exercise_label,
+                        "Output Error",
+                        "matrix_analysis.png exists but is too small to be a real plot.",
+                    )
+                    return
+
+            console.print("[green]OK[/green]")
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
@@ -164,6 +195,28 @@ class Tester(BaseTester):
                 content = f.read()
                 if ".env" not in content:
                     self.record_error(exercise_label, "Security Risk", ".env not found in .gitignore")
+
+        env_example = os.path.join(os.path.dirname(path), ".env.example")
+        if not os.path.exists(env_example):
+            self.record_error(
+                exercise_label,
+                "Missing File",
+                "Missing .env.example file (required by subject)",
+            )
+        else:
+            with open(env_example, "r", encoding="utf-8") as f:
+                ex_lines = f.read().splitlines()
+            non_comment = [
+                ln.strip()
+                for ln in ex_lines
+                if ln.strip() and not ln.strip().startswith("#")
+            ]
+            if not any("=" in ln for ln in non_comment):
+                self.record_error(
+                    exercise_label,
+                    "Config Error",
+                    ".env.example should document at least one KEY=value placeholder.",
+                )
 
         # Strict Check
         allowed_imports = ["dotenv"] # python-dotenv usually imported as dotenv
@@ -204,6 +257,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             # Run all unique
             visited = set()

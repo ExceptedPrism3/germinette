@@ -2,14 +2,13 @@ from germinette.core import BaseTester
 from germinette.utils import IOTester
 from rich.console import Console
 from rich.panel import Panel
-import importlib
 import importlib.util
+import inspect
 import sys
 import os
+import traceback
 
 console = Console()
-import inspect
-import traceback
 
 class Tester(BaseTester):
     def __init__(self):
@@ -46,6 +45,11 @@ class Tester(BaseTester):
                     break
             if not found:
                 console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
         else:
             for _, func in self.exercises:
                 func()
@@ -243,6 +247,8 @@ class Tester(BaseTester):
         cases = [
             ("75", "Plant is ready to harvest!"),
             ("100", "Plant is ready to harvest!"),
+            ("61", "Plant is ready to harvest!"),
+            ("60", "Plant needs more time to grow."),
             ("45", "Plant needs more time to grow."),
             ("12", "Plant needs more time to grow."),
             ("0", "Plant needs more time to grow.")

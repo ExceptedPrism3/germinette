@@ -5,9 +5,7 @@ __pycache__/
 *.so
 .Python
 python_module_*/
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -21,7 +19,11 @@ wheels/
 .installed.cfg
 *.egg
 
-# Temp Artifacts
+# Build / packaging
+build/
+dist/
+
+# Temp artifacts
 *.tar
 *.pdf
 module_*_content.txt
@@ -30,13 +32,7 @@ debug_import.py
 card_generator.tar
 data_generator.tar
 
-
-# Build
-build/
-dist/
-*.egg-info/
-
-# Virtual Environments
+# Virtual environments
 .env
 .venv
 .temp_env/
@@ -44,7 +40,7 @@ env/
 venv/
 ENV/
 
-# Temporary Folder (Project-specific)
+# Project temp
 tmp/
 
 # IDEs
@@ -53,11 +49,6 @@ tmp/
 *.swp
 *.swo
 .DS_Store
-devtools/
 
-# Sensitive / Large Files
-extract_pdf.py
-*.pdf
-*.tar
-devtools/module_*_full.txt
-devtools/temp_mod04/
+# Local devtools (reference solutions; not shipped)
+devtools/
