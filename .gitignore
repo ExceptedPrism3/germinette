@@ -5,6 +5,9 @@ __pycache__/
 *.so
 .Python
 python_module_*/
+# Golden tree for CI (dirname matches python_module_* — must be re-included)
+!tests/fixtures/python_module_07_golden/
+!tests/fixtures/python_module_07_golden/**
 develop-eggs/
 downloads/
 eggs/
@@ -42,6 +45,7 @@ ENV/
 
 # Project temp
 tmp/
+.ci-venv/
 
 # IDEs
 .idea/
