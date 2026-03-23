@@ -509,8 +509,9 @@ class BaseTester:
                 tree = ast.parse(f.read())
             
             # __future__ is always legal (e.g. `from __future__ import annotations`).
+            # typing_extensions: backport for Self, ParamSpec, etc. on Python < 3.11 (e.g. 42 lab 3.10)
             allowed_set = set(allowed_modules).union(
-                {'typing', 'collections', '__future__'}
+                {'typing', 'typing_extensions', 'collections', '__future__'}
             )
             
             for node in ast.walk(tree):
