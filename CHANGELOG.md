@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.9] - 2026-03-23
+### Fixed
+- **Strict imports**: `typing_extensions` is allowed alongside `typing` in `check_imports` (e.g. `Self` on Python 3.10; Issue **#10**, thanks **@mauricelorenz**).
+
 ## [1.6.8] - 2026-03-19
 ### Added
 - **Integration tests**: Golden reference project for Module 07 under `tests/fixtures/python_module_07_golden/` and `tests/test_integration_module07.py`.

@@ -8,6 +8,8 @@ python_module_*/
 # Golden tree for CI (dirname matches python_module_* — must be re-included)
 !tests/fixtures/python_module_07_golden/
 !tests/fixtures/python_module_07_golden/**
+# Negation above would un-ignore __pycache__; keep bytecode out of the repo
+tests/fixtures/python_module_07_golden/**/__pycache__/
 develop-eggs/
 downloads/
 eggs/
