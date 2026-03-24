@@ -64,6 +64,8 @@ cd germinette
 ### 🏠 For Managed Systems (PEP 668: Debian/Ubuntu, Homebrew, **uv**, etc.)
 If Python is **externally managed**, `./install.sh` detects it and **automatically** uses the same isolated install as `--home` (creates `.germinenv`, installs there, symlinks `germinette` to `~/.local/bin`). You can still run `./install.sh --home` directly if you prefer.
 
+If you use **uv**’s Python, keep **`uv`** on your `PATH`: the script will create `.germinenv` with **`uv venv`** (stdlib `venv` / `ensurepip` often fails on those interpreters).
+
 If installation fails, please [open an issue on GitHub](https://github.com/ExceptedPrism3/germinette/issues).
 
 ### 🔄 Updating
