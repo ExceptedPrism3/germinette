@@ -14,6 +14,19 @@ verify_germinette_installed() {
         || python3 -c "import importlib.metadata as m; m.version('germinette')" >/dev/null 2>&1
 }
 
+# PEP 668: distro / uv / Homebrew Pythons ship EXTERNALLY-MANAGED and reject pip install --user.
+is_externally_managed_python() {
+    python3 -c "
+import os, sysconfig
+stdlib = sysconfig.get_path('stdlib')
+if os.path.isfile(os.path.join(stdlib, 'EXTERNALLY-MANAGED')):
+    raise SystemExit(0)
+raise SystemExit(1)
+" 2>/dev/null
+}
+
+INSTALL_SCRIPT="${BASH_SOURCE[0]}"
+
 echo -e "${BLUE}🌱 Installing Germinette...${NC}"
 
 PIP_EXIT=0
@@ -48,14 +61,27 @@ else
     # Standard install logic
     # Credit to @DayraN19 (GitHub Issue #6) for reporting the pip --user virtualenv crash!
     # Prefer `python3 -m pip` so behavior matches the interpreter you run (fewer shim surprises).
+    if [[ -z "$VIRTUAL_ENV" ]] && is_externally_managed_python; then
+        echo -e "${YELLOW}This Python is externally managed (PEP 668), e.g. uv, Homebrew, or distro packages.${NC}"
+        echo -e "${YELLOW}User installs are blocked. Switching to isolated install (same as ${BLUE}./install.sh --home${YELLOW})...${NC}"
+        exec bash "$INSTALL_SCRIPT" --home
+    fi
     if [[ -n "$VIRTUAL_ENV" ]]; then
         echo -e "${BLUE}🐍 Virtual environment detected ($VIRTUAL_ENV). Installing without --user...${NC}"
         python3 -m pip install .
+        PIP_EXIT=$?
     else
         echo -e "${BLUE}👤 Installing to user site-packages...${NC}"
-        python3 -m pip install --user .
+        PIP_LOG="$(mktemp)"
+        python3 -m pip install --user . 2>&1 | tee "$PIP_LOG"
+        PIP_EXIT=${PIPESTATUS[0]}
+        if [[ "$PIP_EXIT" -ne 0 ]] && grep -qiE 'externally-managed-environment|externally managed' "$PIP_LOG" 2>/dev/null; then
+            rm -f "$PIP_LOG"
+            echo -e "${YELLOW}pip reported an externally-managed-environment error. Retrying with isolated --home install...${NC}"
+            exec bash "$INSTALL_SCRIPT" --home
+        fi
+        rm -f "$PIP_LOG"
     fi
-    PIP_EXIT=$?
 fi
 
 if [ "$PIP_EXIT" -ne 0 ]; then
