@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.10] - 2026-03-24
+### Fixed
+- **`install.sh`**: On **PEP 668** / externally managed Python (including **uv**-managed interpreters), automatically fall back to an isolated `.germinenv` install (same as `--home`) instead of failing on `pip install --user`. Secondary retry if pip errors mention `externally-managed-environment` but the marker file was missed.
+
 ## [1.6.9] - 2026-03-23
 ### Fixed
 - **Strict imports**: `typing_extensions` is allowed alongside `typing` in `check_imports` (e.g. `Self` on Python 3.10; Issue **#10**, thanks **@mauricelorenz**).
