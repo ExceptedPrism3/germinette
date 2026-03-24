@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.11] - 2026-03-24
+### Fixed
+- **`install.sh` (`--home`)**: On **uv-managed Python**, `python3 -m venv` often fails (`ensurepip` error) leaving a broken `.germinenv`. The script now removes incomplete envs, prefers **`uv venv .germinenv`** when `uv` is on `PATH`, installs with **`uv pip install --python …`** or the venv interpreter directly (no `source activate`, so the system `python3` is never used for `pip install`).
+
 ## [1.6.10] - 2026-03-24
 ### Fixed
 - **`install.sh`**: On **PEP 668** / externally managed Python (including **uv**-managed interpreters), automatically fall back to an isolated `.germinenv` install (same as `--home`) instead of failing on `pip install --user`. Secondary retry if pip errors mention `externally-managed-environment` but the marker file was missed.

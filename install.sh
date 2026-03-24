@@ -10,8 +10,51 @@ NC='\033[0m' # No Color
 # Credit to @GayaOliveira (GitHub Issue #9) for reporting install.sh failing after a successful
 # pip install when pyenv cannot rehash (e.g. /opt/pyenv/shims not writable — pip shim exits non-zero).
 verify_germinette_installed() {
-    python3 -m pip show germinette >/dev/null 2>&1 \
-        || python3 -c "import importlib.metadata as m; m.version('germinette')" >/dev/null 2>&1
+    local py="${1:-python3}"
+    "$py" -m pip show germinette >/dev/null 2>&1 \
+        || "$py" -c "import importlib.metadata as m; m.version('germinette')" >/dev/null 2>&1
+}
+
+# uv-managed Pythons often break `python3 -m venv` (ensurepip fails). Prefer `uv venv` when available.
+germinenv_python_exe() {
+    if [[ -x "$PWD/.germinenv/bin/python3" ]]; then
+        echo "$PWD/.germinenv/bin/python3"
+    elif [[ -x "$PWD/.germinenv/bin/python" ]]; then
+        echo "$PWD/.germinenv/bin/python"
+    else
+        echo ""
+    fi
+}
+
+germinenv_is_valid() {
+    [[ -f "$PWD/.germinenv/bin/activate" ]] && [[ -n "$(germinenv_python_exe)" ]]
+}
+
+create_germinenv() {
+    if germinenv_is_valid; then
+        return 0
+    fi
+    if [[ -d .germinenv ]]; then
+        echo -e "${YELLOW}Removing incomplete .germinenv (e.g. failed ensurepip)...${NC}"
+        rm -rf .germinenv
+    fi
+    if command -v uv >/dev/null 2>&1; then
+        echo -e "${BLUE}Creating .germinenv with uv (works with uv-managed Python)...${NC}"
+        if uv venv .germinenv --python python3 2>/dev/null || uv venv .germinenv; then
+            :
+        else
+            echo -e "${RED}uv venv failed.${NC}"
+            return 1
+        fi
+    else
+        echo -e "${BLUE}Creating .germinenv with python3 -m venv...${NC}"
+        if ! python3 -m venv .germinenv; then
+            echo -e "${RED}python3 -m venv failed.${NC}"
+            echo -e "${YELLOW}Tip: install uv (https://docs.astral.sh/uv/) and re-run; uv venv avoids broken ensurepip on some Pythons.${NC}"
+            return 1
+        fi
+    fi
+    germinenv_is_valid
 }
 
 # PEP 668: distro / uv / Homebrew Pythons ship EXTERNALLY-MANAGED and reject pip install --user.
@@ -27,24 +70,40 @@ raise SystemExit(1)
 
 INSTALL_SCRIPT="${BASH_SOURCE[0]}"
 
+# Common install location when uv was installed but shell PATH not reloaded
+if ! command -v uv >/dev/null 2>&1 && [[ -x "$HOME/.local/bin/uv" ]]; then
+    PATH="$HOME/.local/bin:$PATH"
+    export PATH
+fi
+
 echo -e "${BLUE}🌱 Installing Germinette...${NC}"
 
 PIP_EXIT=0
+VENV_PY=""
 
 # Install the package
 # Credit to @mauricelorenz (GitHub Issue #4) for suggesting the --home isolated installation feature!
 if [[ "$1" == "--home" ]]; then
     echo -e "${BLUE}🏠 Installing in isolated environment (--home)...${NC}"
-    
-    # Create venv if it doesn't exist
-    if [ ! -d ".germinenv" ]; then
-        python3 -m venv .germinenv
+
+    if ! create_germinenv; then
+        echo -e "${RED}❌ Could not create a valid virtual environment in .germinenv${NC}"
+        exit 1
     fi
-    
-    # Activate and install
-    source .germinenv/bin/activate
-    python3 -m pip install .
-    PIP_EXIT=$?
+
+    VENV_PY="$(germinenv_python_exe)"
+    echo -e "${BLUE}📦 Installing into .germinenv using ${VENV_PY}${NC}"
+    if command -v uv >/dev/null 2>&1; then
+        if uv pip install --python "$VENV_PY" .; then
+            PIP_EXIT=0
+        else
+            "$VENV_PY" -m pip install .
+            PIP_EXIT=$?
+        fi
+    else
+        "$VENV_PY" -m pip install .
+        PIP_EXIT=$?
+    fi
     
     # Ensure local bin exists
     mkdir -p "$HOME/.local/bin"
@@ -85,7 +144,9 @@ else
 fi
 
 if [ "$PIP_EXIT" -ne 0 ]; then
-    if verify_germinette_installed; then
+    if [[ "$1" == "--home" ]] && [[ -n "${VENV_PY:-}" ]] && verify_germinette_installed "$VENV_PY"; then
+        echo -e "${YELLOW}⚠️  pip exited with code $PIP_EXIT, but germinette appears installed in .germinenv.${NC}"
+    elif verify_germinette_installed; then
         echo -e "${YELLOW}⚠️  pip exited with code $PIP_EXIT, but germinette appears to be installed.${NC}"
         echo -e "${YELLOW}   This often happens with pyenv when rehash fails (e.g. shims directory not writable).${NC}"
         echo -e "${YELLOW}   See: https://github.com/ExceptedPrism3/germinette/issues/9${NC}"
