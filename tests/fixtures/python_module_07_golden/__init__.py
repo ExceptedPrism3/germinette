@@ -1,1 +1,1 @@
-"""Golden reference tree for Module 07 (DataDeck) integration tests."""
+"""Root package for golden module 07."""

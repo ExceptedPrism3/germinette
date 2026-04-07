@@ -1,1 +1,4 @@
-"""Exercise 2 — Ability system package."""
+"""Ex2 package."""
+from .strategies import BattleStrategy
+
+__all__ = ["BattleStrategy"]
