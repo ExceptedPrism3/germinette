@@ -7,9 +7,32 @@ from urllib.parse import quote
 from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
-from rich.table import Table
 
 console = Console()
+
+# Shown in the module picker as ``name - v.X.Y``. Keep aligned with intra PDFs; run
+# ``python scripts/check_subject_updates.py`` against the CDN URLs in
+# ``scripts/subject_pdf_urls.json``. Omit a key (e.g. a_maze_ing) for no suffix.
+MODULE_VERSION_LABELS: dict[str, str] = {
+    "python_module_00": "v.3.0",
+    "python_module_01": "v.3.0",
+    "python_module_02": "v.3.0",
+    "python_module_03": "v.3.0",
+    "python_module_04": "v.3.0",
+    "python_module_05": "v.3.0",
+    "python_module_06": "v.2.0",
+    "python_module_07": "v.3.0",
+    "python_module_08": "v.3.0",
+    "python_module_09": "v.3.0",
+    "python_module_10": "v.3.0",
+}
+
+
+def _format_module_display_name(module_name: str) -> str:
+    label = MODULE_VERSION_LABELS.get(module_name)
+    if label:
+        return f"{module_name} - {label}"
+    return module_name
 
 
 def _terminal_hyperlink_url_for_file(abs_path: str) -> str:
@@ -147,11 +170,7 @@ class ModuleDetector:
                 if os.path.exists(os.path.join(cwd, rel_path)):
                     console.print(f"[bold green]Detected {mod_name} based on {rel_path}[/bold green]")
                     return mod_name
-            
-            # Check for directories (less specific, but helpful)
-            # Only if strictly unique directories exist?
-            # "ex0" is common, so maybe relies on files mostly.
-            
+
         return None
 
 class GerminetteRunner:
@@ -170,8 +189,8 @@ class GerminetteRunner:
         # Auto-detect first
         detected = ModuleDetector.detect()
         if detected:
-             console.print(f"Auto-running tests for [bold cyan]{detected}[/bold cyan]...")
-             return self.run_module(detected)
+            console.print(f"Auto-running tests for [bold cyan]{detected}[/bold cyan]...")
+            return self.run_module(detected)
 
         modules = self.list_modules()
         if not modules:
@@ -182,14 +201,11 @@ class GerminetteRunner:
         modules.append("a_maze_ing")
         console.print("[bold]Available Modules:[/bold]")
         for i, mod in enumerate(modules, 1):
-             display_name = mod
-             coming_soon = ["a_maze_ing"]
-             if mod in coming_soon:
-                 display_name += " [yellow](Coming Soon 🚧)[/yellow]"
-             
-
-
-             console.print(f"{i}. {display_name}")
+            display_name = _format_module_display_name(mod)
+            coming_soon = ["a_maze_ing"]
+            if mod in coming_soon:
+                display_name += " [yellow](Coming Soon 🚧)[/yellow]"
+            console.print(f"{i}. {display_name}")
         
         console.print("\n[yellow]Could not auto-detect module in this directory.[/yellow]")
         console.print("Run with: [bold]germinette <module_name>[/bold]")
@@ -241,11 +257,11 @@ class GerminetteRunner:
             matches = difflib.get_close_matches(module_name, available, n=1, cutoff=0.6)
             
             if matches:
-                 console.print(f"\n[green]Did you mean [bold]{matches[0]}[/bold]?[/green]")
-            
+                console.print(f"\n[green]Did you mean [bold]{matches[0]}[/bold]?[/green]")
+
             console.print("\n[bold]Available Modules:[/bold]")
             for m in available:
-                  console.print(f"- {m}")
+                console.print(f"- {_format_module_display_name(m)}")
             return None
 
         except AttributeError:

@@ -14,12 +14,12 @@ class Tester(BaseTester):
     def __init__(self):
         self.exercises = [
             ("ft_hello_garden", self.test_hello_garden),
+            ("ft_garden_name", self.test_garden_name),
             ("ft_plot_area", self.test_plot_area),
             ("ft_harvest_total", self.test_harvest_total),
             ("ft_plant_age", self.test_plant_age),
             ("ft_water_reminder", self.test_water_reminder),
             ("ft_count_harvest", self.test_count_harvest),
-            ("ft_garden_summary", self.test_garden_summary),
             ("ft_seed_inventory", self.test_seed_inventory),
         ]
         self.grouped_errors = {}
@@ -31,7 +31,7 @@ class Tester(BaseTester):
         self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def run(self, exercise_name=None):
-        console.print("[bold blue]Testing Module 00: Growing Code[/bold blue]")
+        console.print("[bold blue]Testing Module 00: Growing Code (v3.0)[/bold blue]")
         
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
@@ -188,9 +188,35 @@ class Tester(BaseTester):
             console.print(f"[red]KO[/red]")
             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
-    def test_plot_area(self):
-        console.print("\n[bold]Testing Exercise 1: ft_plot_area[/bold]")
+    def test_garden_name(self):
+        console.print("\n[bold]Testing Exercise 1: ft_garden_name[/bold]")
         exercise_label = "Exercise 1"
+        func = self._load_func("ft_garden_name", exercise_label)
+        if not func: return
+
+        test_cases = [
+            ("Community Garden", "Garden: Community Garden\nStatus: Growing well!"),
+            ("My Plot", "Garden: My Plot\nStatus: Growing well!"),
+            ("Urban Farm", "Garden: Urban Farm\nStatus: Growing well!"),
+        ]
+
+        for garden_name, expected in test_cases:
+            try:
+                output = IOTester.run_function(func, inputs=[garden_name])
+                # Check that both lines are present
+                if f"Garden: {garden_name}" in output and "Status: Growing well!" in output:
+                    console.print(f"[green]OK ({garden_name})[/green]")
+                else:
+                    console.print(f"[red]KO ({garden_name})[/red]")
+                    self.record_error(exercise_label, f"Failed Case (Input: {garden_name})",
+                                     f"Expected:\n{expected}\nGot:\n{output}")
+            except Exception as e:
+                console.print(f"[red]KO[/red]")
+                self.record_error(exercise_label, f"Runtime Error (Input: {garden_name})", traceback.format_exc())
+
+    def test_plot_area(self):
+        console.print("\n[bold]Testing Exercise 2: ft_plot_area[/bold]")
+        exercise_label = "Exercise 2"
         func = self._load_func("ft_plot_area", exercise_label)
         if not func: return
 
@@ -214,8 +240,8 @@ class Tester(BaseTester):
                 self.record_error(exercise_label, f"Runtime Error (Input: {inputs})", traceback.format_exc())
 
     def test_harvest_total(self):
-        console.print("\n[bold]Testing Exercise 2: ft_harvest_total[/bold]")
-        exercise_label = "Exercise 2"
+        console.print("\n[bold]Testing Exercise 3: ft_harvest_total[/bold]")
+        exercise_label = "Exercise 3"
         func = self._load_func("ft_harvest_total", exercise_label)
         if not func: return
 
@@ -239,8 +265,8 @@ class Tester(BaseTester):
                 self.record_error(exercise_label, f"Runtime Error (Input: {inputs})", traceback.format_exc())
 
     def test_plant_age(self):
-        console.print("\n[bold]Testing Exercise 3: ft_plant_age[/bold]")
-        exercise_label = "Exercise 3"
+        console.print("\n[bold]Testing Exercise 4: ft_plant_age[/bold]")
+        exercise_label = "Exercise 4"
         func = self._load_func("ft_plant_age", exercise_label)
         if not func: return
 
@@ -267,15 +293,17 @@ class Tester(BaseTester):
                 self.record_error(exercise_label, f"Runtime Error (Input: {inp})", traceback.format_exc())
 
     def test_water_reminder(self):
-        console.print("\n[bold]Testing Exercise 4: ft_water_reminder[/bold]")
-        exercise_label = "Exercise 4"
+        console.print("\n[bold]Testing Exercise 5: ft_water_reminder[/bold]")
+        exercise_label = "Exercise 5"
         func = self._load_func("ft_water_reminder", exercise_label)
         if not func: return
         
         cases = [
             ("4", "Water the plants!"),
             ("10", "Water the plants!"),
+            ("3", "Water the plants!"),
             ("2", "Plants are fine"),
+            ("1", "Plants are fine"),
             ("0", "Plants are fine")
         ]
 
@@ -292,8 +320,8 @@ class Tester(BaseTester):
                 self.record_error(exercise_label, f"Runtime Error (Input: {inp})", traceback.format_exc())
 
     def test_count_harvest(self):
-        console.print("\n[bold]Testing Exercise 5: ft_count_harvest[/bold]")
-        exercise_label = "Exercise 5"
+        console.print("\n[bold]Testing Exercise 6: ft_count_harvest[/bold]")
+        exercise_label = "Exercise 6"
         
         func1 = self._load_func("ft_count_harvest_iterative", exercise_label)
         if func1:
@@ -344,35 +372,6 @@ class Tester(BaseTester):
                 except Exception as e:
                      console.print(f"[red]Recursive KO[/red]")
                      self.record_error(exercise_label, f"Recursive Error (Input: {inp})", traceback.format_exc())
-
-    def test_garden_summary(self):
-        console.print("\n[bold]Testing Exercise 6: ft_garden_summary[/bold]")
-        exercise_label = "Exercise 6"
-        func = self._load_func("ft_garden_summary", exercise_label)
-        if not func: return
-
-        test_cases = [
-            (["MyGarden", "25"], ["Garden: MyGarden", "Plants: 25", "Status: Growing well!"]),
-            (["SpaceFarm", "100"], ["Garden: SpaceFarm", "Plants: 100", "Status: Growing well!"]),
-            (["SmallPlot", "0"], ["Garden: SmallPlot", "Plants: 0", "Status: Growing well!"])
-        ]
-
-        for inputs, checks in test_cases:
-            try:
-                out = IOTester.run_function(func, inputs=inputs)
-                failed = False
-                for c in checks:
-                    if c not in out:
-                        failed = True
-                
-                if failed:
-                   console.print(f"[red]KO ({inputs})[/red]")
-                   self.record_error(exercise_label, "Failed Test Case", f"Input: {inputs}\nExpected strings: {checks}\nGot:\n{out}")
-                else:
-                   console.print(f"[green]OK ({inputs[0]})[/green]")
-            except Exception as e:
-                console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     # Credit to @eloiberlinger1 (GitHub PR #1) for adding exact match validation to detect unexpected content in ex07!
     def test_seed_inventory(self):

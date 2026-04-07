@@ -10,9 +10,9 @@ console = Console()
 class Tester(BaseTester):
     def __init__(self):
         self.exercises = [
-            ("stream_processor", self.test_stream_processor),
-            ("data_stream", self.test_polymorphic_streams),
-            ("nexus_pipeline", self.test_nexus_integration),
+            ("data_processor", self.test_data_processor),
+            ("data_stream", self.test_data_stream),
+            ("data_pipeline", self.test_data_pipeline),
         ]
         self.grouped_errors = {}
 
@@ -29,9 +29,9 @@ class Tester(BaseTester):
             base_dir = cwd
 
         ex_map = {
-            "stream_processor": 0,
+            "data_processor": 0,
             "data_stream": 1,
-            "nexus_pipeline": 2,
+            "data_pipeline": 2,
         }
         
         expected_dir = None
@@ -59,16 +59,12 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Missing File", msg)
              return None, None
 
-        # Style Checks
         style_errors = self.check_flake8(found_path)
         if style_errors:
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
              return None, None
-        
 
-
-        # Type Hint Checks
         type_errors = self.check_type_hints(found_path)
         if type_errors:
              console.print("[red]KO[/red]")
@@ -78,7 +74,7 @@ class Tester(BaseTester):
         return "FOUND", found_path 
 
     def run(self, exercise_name=None):
-        console.print("[bold cyan]Testing Module 05: Code Nexus (Polymorphism)[/bold cyan]")
+        console.print("[bold cyan]Testing Module 05: Code Nexus (v3.0)[/bold cyan]")
         
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
@@ -115,10 +111,9 @@ class Tester(BaseTester):
     def check_polymorphism_requirements(self, path, exercise_label):
         """Checks for mandatory usage of super()."""
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 tree = ast.parse(f.read())
             
-            # Check for super()
             has_super = False
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'super':
@@ -133,27 +128,20 @@ class Tester(BaseTester):
             console.print(f"[red]KO (AST Error: {e})[/red]")
             return False
 
-    def test_stream_processor(self):
-        console.print("\n[bold]Testing Exercise 0: stream_processor[/bold]")
+    def test_data_processor(self):
+        console.print("\n[bold]Testing Exercise 0: data_processor[/bold]")
         exercise_label = "Exercise 0"
-        status, path = self._load_module("stream_processor", exercise_label)
+        status, path = self._load_module("data_processor", exercise_label)
         if not status: return
 
-        # Strict Checks
-        # Ex0: Basic Polymorphism.
-        # Authorized: print, super, and common builtins.
-        # Imports: abc (for ABC), typing (implicit usually), but "Only standard library... unless specified".
-        # We allow standard utility imports but verify no forbidden ones if strict.
-        # PDF says "Authorized: print()". This implies strictness on functions?
-        # But we need len, sum, etc for logic.
-        allowed_builtins = ["print", "len", "float", "int", "str", "isinstance", "issubclass", "all", "any", "zip", "sum", "list", "dict"]
+        # v3.0 check architecture (ABC module required)
+        allowed_builtins = ["print", "len", "float", "int", "str", "isinstance", "issubclass", "all", "any", "zip", "sum", "list", "dict", "tuple"]
         
         if not self.verify_strict(path, exercise_label, 
                                   allowed_builtins, 
                                   allowed_imports=["sys", "abc", "typing"], 
                                   enforce_try_except=True): return
 
-        # Enforce super() explicitly
         if not self.check_polymorphism_requirements(path, exercise_label): return
 
         import subprocess
@@ -163,20 +151,23 @@ class Tester(BaseTester):
             out = result.stdout + result.stderr
             if self.check_for_crash(out, exercise_label): return
 
-            if "=== CODE NEXUS - DATA PROCESSOR FOUNDATION ===" not in out:
-                console.print("[red]KO (Missing Header)[/red]")
-                self.record_error(exercise_label, "Output Error", "Missing header '=== CODE NEXUS - DATA PROCESSOR FOUNDATION ==='")
-                return
+            # AST Verification for ABC
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
             
-            # v24 PDF Specific output
+            classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+            if "DataProcessor" not in classes or "NumericProcessor" not in classes or "TextProcessor" not in classes or "LogProcessor" not in classes:
+                 console.print("[red]KO (Missing Classes)[/red]")
+                 self.record_error(exercise_label, "Structure Error", f"Missing required classes. Found: {classes}")
+                 return
+            
+            # v3.0 check output
             required = [
-                "Processing data: [1, 2, 3, 4, 5]",
-                "Output: Processed 5 numeric values, sum=15, avg=3.0",
-                "Processing data: \"Hello Nexus World\"",
-                "Output: Processed text: 17 characters, 3 words",
-                "Output: [ALERT] ERROR level detected: Connection timeout",
-                "=== Polymorphic Processing Demo ===",
-                "Processed 3 numeric values, sum=6, avg=2.0"
+                "Testing Numeric Processor",
+                "Processed: 3 items",
+                "Testing Text Processor",
+                "Testing Log Processor",
+                "Testing Error Handling"
             ]
             
             missing = [r for r in required if r not in out]
@@ -184,30 +175,24 @@ class Tester(BaseTester):
                 console.print("[green]OK[/green]")
             else:
                  console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
+                 self.record_error(exercise_label, "Output Error", f"Missing expected output segments. Missing: {missing}")
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
 
-    def test_polymorphic_streams(self):
+    def test_data_stream(self):
         console.print("\n[bold]Testing Exercise 1: data_stream[/bold]")
         exercise_label = "Exercise 1"
         status, path = self._load_module("data_stream", exercise_label)
         if not status: return
 
-        # Strict Checks
-        # Ex1: Polymorphic Streams
-        # Authorization: isinstance, print.
-        # Imports: sys, random, time (simulation), abc, typing.
-        allowed_builtins = ["next", "iter", "range", "len", "print", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any", "sum", "list", "dict", "enumerate"]
+        # v3.0
+        allowed_builtins = ["next", "iter", "range", "len", "print", "float", "int", "str", "isinstance", "issubclass", "tuple", "list", "dict"]
         
         if not self.verify_strict(path, exercise_label, 
                                   allowed_builtins, 
-                                  allowed_imports=["sys", "random", "time", "abc", "typing"], 
+                                  allowed_imports=["sys", "abc", "typing"], 
                                   enforce_try_except=True): return
-        
-        # Enforce super()
-        if not self.check_polymorphism_requirements(path, exercise_label): return
 
         import subprocess
         try:
@@ -216,22 +201,22 @@ class Tester(BaseTester):
             out = result.stdout + result.stderr
             if self.check_for_crash(out, exercise_label): return
 
-            if "=== CODE NEXUS - POLYMORPHIC STREAM SYSTEM ===" not in out:
-                console.print("[red]KO (Missing Header)[/red]")
-                self.record_error(exercise_label, "Output Error", "Missing header '=== CODE NEXUS - POLYMORPHIC STREAM SYSTEM ==='")
-                return
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+            if "DataStream" not in classes:
+                 console.print("[red]KO (Missing DataStream Class)[/red]")
+                 self.record_error(exercise_label, "Structure Error", "DataStream class is missing.")
+                 return
 
             required = [
-                "Initializing Sensor Stream",
-                "Sensor analysis: 3 readings processed, avg temp:",
-                "Initializing Transaction Stream",
-                "Transaction analysis: 3 operations, net flow:",
-                "Initializing Event Stream",
-                "Event analysis: 3 events",
-                "=== Polymorphic Stream Processing ===",
-                "Batch 1 Results:",
-                "Stream filtering active",
-                "Filtered results: 2 critical sensor alerts"
+                "=== Streaming Data Demo ===",
+                "Registering processors",
+                "Processing stream",
+                "Stream Results",
+                "Total numeric items",
+                "Total textual items",
+                "Total log items"
             ]
 
             missing = [r for r in required if r not in out]
@@ -239,39 +224,32 @@ class Tester(BaseTester):
                 console.print("[green]OK[/green]")
             else:
                  console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
+                 self.record_error(exercise_label, "Output Error", f"Missing expected output: {missing}")
 
         except Exception as e:
               console.print(f"[red]KO (Execution Error: {e})[/red]")
 
-    def test_nexus_integration(self):
-        console.print("\n[bold]Testing Exercise 2: nexus_pipeline[/bold]")
+    def test_data_pipeline(self):
+        console.print("\n[bold]Testing Exercise 2: data_pipeline[/bold]")
         exercise_label = "Exercise 2"
-        status, path = self._load_module("nexus_pipeline", exercise_label)
+        status, path = self._load_module("data_pipeline", exercise_label)
         if not status: return
 
-        # Strict Checks
-        # Ex2: Nexus Pipeline
-        # Authorized: isinstance, print, collections, typing...
-        allowed_builtins = ["print", "len", "range", "float", "int", "str", "isinstance", "issubclass", "zip", "all", "any", "list", "dict", "set", "enumerate"]
+        # v3.0: export plugin protocols
+        allowed_builtins = ["print", "len", "range", "float", "int", "str", "isinstance", "issubclass", "list", "dict", "tuple"]
         
         if not self.verify_strict(path, exercise_label, 
                                   allowed_builtins, 
-                                  allowed_imports=["sys", "json", "csv", "io", "abc", "typing", "collections", "random", "time"], # random/time might be needed for simulation
-                                  enforce_try_except=True): return
-        
-        # Enforce super()
-        if not self.check_polymorphism_requirements(path, exercise_label): return
+                                  allowed_imports=["sys", "json", "csv", "io", "abc", "typing", "collections"], 
+                                  enforce_try_except=False): return
 
-        # Check for Check use of typing.Protocol? (duck typing)
-        # It's hard to verify strict Protocol usage via AST easily without deeper analysis, 
-        # but we can check if 'Protocol' is imported/used.
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
-            if "Protocol" not in content and "typing" in content:
-                 # Loose check, but good indicator
-                 console.print("[yellow]Warning: 'Protocol' not found. Duck typing is required.[/yellow]")
+            if "Protocol" not in content:
+                 console.print("[red]KO (Missing Protocol)[/red]")
+                 self.record_error(exercise_label, "Structure Error", "You must use typing.Protocol for ExportPlugin.")
+                 return
         except: pass
 
         import subprocess
@@ -281,28 +259,16 @@ class Tester(BaseTester):
             out = result.stdout + result.stderr
             if self.check_for_crash(out, exercise_label): return
 
-            if "=== CODE NEXUS - ENTERPRISE PIPELINE SYSTEM ===" not in out:
+            if "=== Protocol & Pipeline Demo ===" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
-                self.record_error(exercise_label, "Output Error", "Missing header '=== CODE NEXUS - ENTERPRISE PIPELINE SYSTEM ==='")
+                self.record_error(exercise_label, "Output Error", "Missing header '=== Protocol & Pipeline Demo ==='")
                 return
 
             required = [
-                "Pipeline capacity:", 
-                "Creating Data Processing Pipeline",
-                "Stage 1: Input validation and parsing",
-                "Stage 3: Output formatting and delivery",
-                "=== Multi-Format Data Processing ===",
-                "Processing JSON data",
-                "Output: Processed temperature reading: 23.5°C",
-                "Processing CSV data",
-                "Output: User activity logged: 1 actions processed",
-                "Processing Stream data",
-                "Output: Stream summary:",
-                "=== Pipeline Chaining Demo ===",
-                "Pipeline A -> Pipeline B -> Pipeline C",
-                "Chain result: 100 records processed",
-                "=== Error Recovery Test ===",
-                "Recovery successful: Pipeline restored"
+                "Exporting to CSV",
+                "Exporting to JSON",
+                "csv_output",
+                "json_output"
             ]
 
             missing = [r for r in required if r not in out]
@@ -310,7 +276,7 @@ class Tester(BaseTester):
                 console.print("[green]OK[/green]")
             else:
                  console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
+                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}")
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")

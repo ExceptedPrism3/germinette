@@ -58,3 +58,8 @@ tmp/
 
 # Local devtools (reference solutions; not shipped)
 devtools/
+
+# Scripts and subject versioning tools
+scripts/
+germinette/subject_versions.py
+tests/test_subject_versions.py

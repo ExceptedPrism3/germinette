@@ -28,7 +28,7 @@ class Tester(BaseTester):
         self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def run(self, exercise_name=None):
-        console.print("[bold blue]Testing Module 01: CodeCultivation (v2.2)[/bold blue]")
+        console.print("[bold blue]Testing Module 01: Code Cultivation (v3.0)[/bold blue]")
         
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
@@ -119,11 +119,32 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # PDF v18: "Rose: 25cm, 30 days old" (approximate match required)
-            if "Rose" not in output or "25cm" not in output:
+            # v3.0: Must use if __name__ == "__main__": pattern
+            # Output should include plant info (name, height, age)
+            with open(path, "r") as f:
+                source = f.read()
+
+            if '__name__' not in source or '__main__' not in source:
                 console.print("[red]KO[/red]")
-                self.record_error(label, "Output Mismatch", f"Expected 'Rose' and '25cm' in output.\nGot:\n{output}")
+                self.record_error(label, "Missing Pattern",
+                                  "Your script must use the 'if __name__ == \"__main__\":' pattern.\n"
+                                  "This is required by the subject.")
                 return
+
+            # v3.0 PDF shows Rose, 25cm, 30 days as example — approximate match
+            checks_found = 0
+            for keyword in ["Plant:", "Height:", "Age:"]:
+                if keyword in output:
+                    checks_found += 1
+
+            if checks_found < 2:
+                # Fallback: check for the old-style format too
+                if "Rose" not in output and "cm" not in output:
+                    console.print("[red]KO[/red]")
+                    self.record_error(label, "Output Mismatch",
+                                      "Expected plant information in output (name, height, age).\n"
+                                      f"Got:\n{output}")
+                    return
             
             console.print("[green]OK[/green]")
         except Exception as e:
@@ -143,11 +164,33 @@ class Tester(BaseTester):
                 return
 
             Plant = mod.Plant
+
+            # v3.0: Plant class must have show() method
             p = Plant("Test", 10, 5)
-            
-            # Run script to catch runtime errors
+            if not hasattr(p, 'show'):
+                self.record_error(label, "Missing Method",
+                                  "Plant class must have a 'show()' method.\n"
+                                  "The subject requires show() to display plant information.")
+                console.print("[red]KO[/red]")
+                return
+
+            # Run script to catch runtime errors and verify output
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
+
+            # v3.0 expects at least 3 plants displayed
+            # Format: "Name: Xcm, Y days old"
+            line_count = 0
+            for line in output.strip().split("\n"):
+                if "cm" in line and "days old" in line:
+                    line_count += 1
+
+            if line_count < 3:
+                self.record_error(label, "Insufficient Plants",
+                                  f"Expected at least 3 plants displayed. Found {line_count} plant lines.\n"
+                                  f"Output:\n{output}")
+                console.print("[red]KO[/red]")
+                return
 
             console.print("[green]OK[/green]")
         except Exception as e:
@@ -169,17 +212,21 @@ class Tester(BaseTester):
 
             p = Plant("Bamboo", 100, 10)
             
+            # v3.0: requires grow() and age() methods; show() instead of get_info()
             missing = []
             if not hasattr(p, 'grow'): missing.append('grow')
             if not hasattr(p, 'age'): missing.append('age')
-            if not hasattr(p, 'get_info'): missing.append('get_info')
+            if not hasattr(p, 'show'):
+                # Accept get_info as fallback for backwards compat
+                if not hasattr(p, 'get_info'):
+                    missing.append('show (or get_info)')
 
             if missing:
                 self.record_error(label, "Missing Methods", f"Missing required methods: {', '.join(missing)}")
                 console.print("[red]KO[/red]")
                 return
 
-            # Check output for "=== Day 7 ===" simulation
+            # Check output for Day 1-7 simulation
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
@@ -203,16 +250,14 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            required = ["=== Plant Factory Output ===", "Total plants created:"]
-            
-            for req in required:
-                if req not in output:
-                     self.record_error(label, "Output Mismatch", f"Missing required header/footer: '{req}'")
-                     console.print("[red]KO[/red]")
-                     return
+            # v3.0: expects "=== Plant Factory Output ===" header and at least 5 "Created:" lines
+            if "=== Plant Factory Output ===" not in output:
+                self.record_error(label, "Output Mismatch", "Missing required header: '=== Plant Factory Output ==='")
+                console.print("[red]KO[/red]")
+                return
             
             if output.count("Created:") < 5:
-                 self.record_error(label, "Logic Error", "Expected at least 5 plants to be created.")
+                 self.record_error(label, "Logic Error", "Expected at least 5 plants to be created (5 'Created:' lines).")
                  console.print("[red]KO[/red]")
                  return
 
@@ -228,28 +273,57 @@ class Tester(BaseTester):
         if not path: return
 
         try:
-            SecurePlant = getattr(mod, 'SecurePlant', None)
-            if not SecurePlant:
-                self.record_error(label, "Missing Class", "Class 'SecurePlant' not found")
+            # v3.0 says improve Plant class, not create SecurePlant
+            # Accept both for backwards compatibility
+            PlantClass = getattr(mod, 'Plant', None)
+            class_name = 'Plant'
+            if not PlantClass:
+                PlantClass = getattr(mod, 'SecurePlant', None)
+                class_name = 'SecurePlant'
+            if not PlantClass:
+                self.record_error(label, "Missing Class",
+                                  "Neither 'Plant' nor 'SecurePlant' class found.\n"
+                                  "The v3.0 subject requires improving the Plant class with encapsulation.")
                 console.print("[red]KO[/red]")
                 return
 
-            # Check Strict Methods (Getters not required)
-            p = SecurePlant("Test", 10, 1)
+            # Check required accessor methods
+            p = PlantClass("Test", 10, 1)
             req_methods = ['set_height', 'set_age', 'get_height', 'get_age']
             missing = [m for m in req_methods if not hasattr(p, m)]
             
             if missing:
-                self.record_error(label, "Missing Methods", f"Missing required accessor methods: {missing}")
+                self.record_error(label, "Missing Methods",
+                                  f"Missing required accessor methods on {class_name}: {missing}")
                 console.print("[red]KO[/red]")
                 return
+
+            # v3.0: check encapsulation uses _protected convention (not __mangling)
+            instance_vars = vars(p)
+            has_protected = any(k.startswith('_') and not k.startswith('__') for k in instance_vars)
+            has_mangling = any(k.startswith(f'_{class_name}__') or k.startswith('__') and not k.startswith('__') and k.endswith('__') for k in instance_vars)
+            
+            if not has_protected and not has_mangling:
+                console.print("[yellow]Warning: No protected attributes found (expected _ prefix convention)[/yellow]")
 
             # Run script to check validation messages
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            if "Security: Negative height rejected" not in output:
-                 self.record_error(label, "Security Error", "Expected security rejection message in output.")
+            # v3.0 error format: "Rose: Error, height can't be negative"
+            # Accept both old and new error messages
+            has_rejection = False
+            rejection_patterns = [
+                "error" in output.lower() and "negative" in output.lower(),
+                "rejected" in output.lower(),
+                "can't be negative" in output.lower(),
+            ]
+            has_rejection = any(rejection_patterns)
+
+            if not has_rejection:
+                 self.record_error(label, "Security Error",
+                                   "Expected error/rejection message when setting negative values.\n"
+                                   "v3.0 format: 'Rose: Error, height can't be negative'")
                  console.print("[red]KO[/red]")
                  return
 
@@ -265,30 +339,50 @@ class Tester(BaseTester):
         if not path: return
 
         try:
-            # Check classes
+            # Check classes exist
             for cls_name in ['Flower', 'Tree', 'Vegetable']:
                 if not hasattr(mod, cls_name):
                     self.record_error(label, "Missing Class", f"Missing class '{cls_name}'")
                     console.print("[red]KO[/red]")
                     return
 
-            # Check Inheritance and Methods
             Flower = mod.Flower
             Tree = mod.Tree
-            
+            Vegetable = mod.Vegetable
+
+            # Check inheritance — all should inherit from Plant
+            Plant = getattr(mod, 'Plant', None)
+            if Plant:
+                for cls, name in [(Flower, "Flower"), (Tree, "Tree"), (Vegetable, "Vegetable")]:
+                    if not issubclass(cls, Plant):
+                        self.record_error(label, "Inheritance Error",
+                                          f"'{name}' must inherit from 'Plant'")
+                        console.print("[red]KO[/red]")
+                        return
+
+            # Check required methods
             f = Flower("Test", 1, 1, "Red")
-            t = Tree("Test", 100, 10, 50)
-            
             if not hasattr(f, 'bloom'):
                  self.record_error(label, "Missing Method", "Flower missing 'bloom()'")
                  console.print("[red]KO[/red]")
                  return
+
+            t = Tree("Test", 100, 10, 50)
             if not hasattr(t, 'produce_shade'):
                  self.record_error(label, "Missing Method", "Tree missing 'produce_shade()'")
                  console.print("[red]KO[/red]")
                  return
 
-            # Verify script execution to catch runtime errors (like missing methods in main)
+            # v3.0: Vegetable needs harvest_season and nutritional_value
+            try:
+                v = Vegetable("Tomato", 5, 10, "April")
+                if not hasattr(v, 'harvest_season') and not hasattr(v, '_harvest_season'):
+                    console.print("[yellow]Warning: Vegetable missing 'harvest_season' attribute[/yellow]")
+            except TypeError:
+                # Constructor might need different args, that's okay
+                pass
+
+            # Verify script execution
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
@@ -304,25 +398,88 @@ class Tester(BaseTester):
         if not path: return
 
         try:
+            # v3.0: Plant class with static method, class method, nested stats
+            # Also accept old GardenManager for backwards compat
+            Plant = getattr(mod, 'Plant', None)
             GardenManager = getattr(mod, 'GardenManager', None)
-            if not GardenManager:
-                self.record_error(label, "Missing Class", "GardenManager not found")
+
+            # Check for Seed class (v3.0: inherits from Flower)
+            Seed = getattr(mod, 'Seed', None)
+
+            if not Plant and not GardenManager:
+                self.record_error(label, "Missing Class",
+                                  "Neither 'Plant' nor 'GardenManager' found.\n"
+                                  "v3.0 requires Plant class with static/class methods and nested stats.")
                 console.print("[red]KO[/red]")
                 return
 
-            # Strict Nested Class Check
-            if not hasattr(GardenManager, 'GardenStats') or not inspect.isclass(getattr(GardenManager, 'GardenStats')):
-                 self.record_error(label, "Structure Error", "GardenStats must be a Nested Class inside GardenManager.")
-                 console.print("[red]KO[/red]")
-                 return
+            # v3.0 checks: static method on Plant for age check
+            if Plant:
+                # Check for static method (is_older_than_year or similar)
+                has_static = False
+                for name, method in inspect.getmembers(Plant):
+                    if isinstance(inspect.getattr_static(Plant, name, None), staticmethod):
+                        has_static = True
+                        break
+                
+                if not has_static:
+                    console.print("[yellow]Warning: No static method found on Plant class[/yellow]")
 
+                # Check for class method (anonymous plant creation)
+                has_classmethod = False
+                for name, method in inspect.getmembers(Plant):
+                    if isinstance(inspect.getattr_static(Plant, name, None), classmethod):
+                        has_classmethod = True
+                        break
+                
+                if not has_classmethod:
+                    console.print("[yellow]Warning: No class method found on Plant class[/yellow]")
+
+            # Check for nested stats class
+            has_nested_stats = False
+            if Plant:
+                for attr_name in dir(Plant):
+                    attr = getattr(Plant, attr_name, None)
+                    if inspect.isclass(attr) and attr_name not in ('__class__',):
+                        has_nested_stats = True
+                        break
+            if GardenManager:
+                if hasattr(GardenManager, 'GardenStats') and inspect.isclass(getattr(GardenManager, 'GardenStats')):
+                    has_nested_stats = True
+
+            if not has_nested_stats:
+                console.print("[yellow]Warning: No nested stats class found[/yellow]")
+
+            # Check Seed class inherits from Flower
+            if Seed:
+                Flower = getattr(mod, 'Flower', None)
+                if Flower and not issubclass(Seed, Flower):
+                    self.record_error(label, "Inheritance Error",
+                                      "Seed class must inherit from Flower")
+                    console.print("[red]KO[/red]")
+                    return
+
+            # Run script and check for expected output sections
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            if "Garden scores" not in output or "Total gardens managed" not in output:
-                 self.record_error(label, "Output Error", "Missing analytics sections (scores/totals) in output.")
-                 console.print("[red]KO[/red]")
-                 return
+            # v3.0 expects: year-old check, flower stats, tree stats with shade, seed, anonymous
+            # Accept both old and new output formats
+            checks = 0
+            if "Stats:" in output or "Garden scores" in output:
+                checks += 1
+            if "True" in output or "False" in output:
+                checks += 1
+            if "Anonymous" in output or "Unknown plant" in output or "Total gardens" in output:
+                checks += 1
+
+            if checks < 2:
+                self.record_error(label, "Output Error",
+                                  "Missing expected analytics sections in output.\n"
+                                  "v3.0 expects: year check, stats display, anonymous plant.\n"
+                                  f"Got:\n{output}")
+                console.print("[red]KO[/red]")
+                return
 
             console.print("[green]OK[/green]")
         except Exception as e:
