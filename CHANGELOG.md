@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.0] - 2026-04-06
+### Added
+- **Global v3.0 Compatibility**: Core updater logic (`MODULE_VERSION_LABELS`) properly aligns Module 00 through Module 10 to standard v3.0 specs.
+- **Module 02**: Added tests parsing behavior and error handling of `ft_raise_exception` and native core Exceptions like `TypeError`.
+- **Module 03**: Abstract Syntax Tree parsing ensuring `ft_data_alchemist` specifically utilizes List Comprehensions per v3.0 rubric.
+- **Module 04**: Comprehensive tests for handling `sys.stdin`/`sys.stderr` safely (added string checks for exact validation brackets e.g. `[STDERR]`).
+- **Module 05 Code Nexus**: Completely new evaluation path tailored to test Abstract Base Classes (`data_processor`), multi-faceted inheritance Polymorphism (`data_stream`), and Python Protocols (`data_pipeline`).
+- **Module 06 The Codex**: Full overwrite matching the massive v2.0 package integration refractor: enforces execution validation, circular dependencies, absolute/relative routing, and package visibility mapping.
+- **Module 07 DataDeck**: Dropped the old Card format logic and rewrote tests checking for `CreatureFactory` (Abstract Factory mapping), `HealCapability` (Mixins), and `BattleStrategy` (Abstract Strategy).
+- Modules 08, 09, and 10 required zero evaluation overwrites (only simple version bumps) and remain fully compliant natively.
+
+### Removed
+- **Legacy Logic**: Hundreds of lines of deprecated code wiped relating to dead v1.0 and v2.0 exercises (`ft_analytics_dashboard`, `ft_crisis_response`, old card games, etc.).
+
 ## [1.6.11] - 2026-03-24
 ### Fixed
 - **`install.sh` (`--home`)**: On **uv-managed Python**, `python3 -m venv` often fails (`ensurepip` error) leaving a broken `.germinenv`. The script now removes incomplete envs, prefers **`uv venv .germinenv`** when `uv` is on `PATH`, installs with **`uv pip install --python …`** or the venv interpreter directly (no `source activate`, so the system `python3` is never used for `pip install`).

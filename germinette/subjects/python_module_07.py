@@ -1,16 +1,13 @@
 """
-Module 07 (DataDeck) tester.
+Module 07 (DataDeck) tester - v3.0
 
-Recommendations / future hardening (not all implemented here):
-  - Normalize expected output checks (allow minor formatting / repr differences).
-  - Optionally require each exN/__init__.py to exist and re-export the public API.
-  - If false positives appear, tune verify_strict allowed_imports per file (e.g. ex4 only).
-  - Document that students must run germinette from the repo root (parent of ex0/).
-  - Golden regression tree: tests/fixtures/python_module_07_golden/ (see tests/test_integration_module07.py).
+Tests Abstract Factories, Capabilities (Mixins), and Abstract Strategies.
 """
 import sys
 import os
 import ast
+import traceback
+import subprocess
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
@@ -20,11 +17,12 @@ console = Console()
 class Tester(BaseTester):
     def __init__(self):
         self.exercises = [
-            ("ex0", self.test_card_foundation),
-            ("ex1", self.test_deck_builder),
-            ("ex2", self.test_ability_system),
-            ("ex3", self.test_game_engine),
-            ("ex4", self.test_tournament_platform),
+            ("ex00", self.test_creature_factory),
+            ("ex0", self.test_creature_factory),
+            ("ex01", self.test_capabilities),
+            ("ex1", self.test_capabilities),
+            ("ex02", self.test_abstract_strategy),
+            ("ex2", self.test_abstract_strategy),
         ]
         self.grouped_errors = {}
 
@@ -33,45 +31,183 @@ class Tester(BaseTester):
             self.grouped_errors[exercise_label] = []
         self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
-    def _load_module_path(self, ex_dir_name, main_file="main.py"):
+    def _find_root_dir(self):
         cwd = os.getcwd()
-        # Logic to find the exercise directory (handling repository root vs test dir)
-        # We assume the user runs from root, and structure is ex0/, ex1/, etc.
-        # But for 'germinette devtools/test/python_module_07', it might be different.
-        
-        # Try finding 'ex0', 'ex1' in current directory
-        if os.path.exists(ex_dir_name) and os.path.isdir(ex_dir_name):
-            return os.path.join(cwd, ex_dir_name, main_file)
-        
-        # Try finding it inside a 'python_module_07' folder
-        if os.path.exists("python_module_07"):
-             sub_path = os.path.join("python_module_07", ex_dir_name, main_file)
-             if os.path.exists(sub_path):
-                 return os.path.abspath(sub_path)
-
-        # Fallback for devtools structure where we might be IN the module dir provided by arg
-        # If cwd ends with python_module_07, look for exN
         if os.path.basename(cwd) == "python_module_07":
-             if os.path.exists(ex_dir_name):
-                 return os.path.join(cwd, ex_dir_name, main_file)
+            return cwd
+        base_search = [
+            os.path.join(cwd, "python_module_07"),
+            os.path.join(cwd, "devtools", "test", "python_module_07"),
+            cwd
+        ]
+        for base in base_search:
+            if os.path.exists(os.path.join(base, "ex0")):
+                return base
+        return cwd
 
-        return None
+    def common_strict_check(self, path, label, extra_imports=None):
+        allowed_funcs = [
+            "print", "len", "sum", "max", "min", "range", "zip", "enumerate", 
+            "int", "float", "str", "bool", "list", "dict", "set", "tuple",
+            "isinstance", "issubclass", "super", "next", "iter", "all", "any", "id",
+            "getattr", "hasattr", "setattr", "type"
+        ]
+        
+        allowed_imports = ["sys", "os", "typing", "abc", "random", "datetime"]
+        if extra_imports:
+             allowed_imports.extend(extra_imports)
+
+        style_errors = self.check_flake8(path)
+        if style_errors:
+             console.print("[red]KO[/red]")
+             self.record_error(label, "Style Error (Flake8)", style_errors)
+             return False
+
+        type_errors = self.check_type_hints(path)
+        if type_errors:
+             console.print("[red]KO (Type Hints)[/red]")
+             self.record_error(label, "Style Error (Missing Type Hints)", type_errors)
+             return False
+
+        return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=False)
+
+    def _check_ex_directory(self, root_dir, ex_name, label):
+        ex_dir = os.path.join(root_dir, ex_name)
+        if not os.path.exists(ex_dir):
+            return True # Not strictly enforcing existence if main file exists, but good to check
+        for fname in os.listdir(ex_dir):
+            if fname.endswith(".py"):
+                path = os.path.join(ex_dir, fname)
+                if not self.common_strict_check(path, label, extra_imports=["ex0", "ex1", "ex2"]):
+                    return False
+        return True
+
+    def test_creature_factory(self):
+        console.print("\n[bold]Testing Exercise 0: Creature Factory[/bold]")
+        exercise_label = "Exercise 0"
+        root_dir = self._find_root_dir()
+        script_path = os.path.join(root_dir, "battle.py")
+        
+        if not os.path.exists(script_path):
+             console.print("[red]KO (Missing File)[/red]")
+             self.record_error(exercise_label, "Missing File", "Could not find battle.py at root.")
+             return
+            
+        if not self.common_strict_check(script_path, exercise_label, extra_imports=["ex0", "ex1", "ex2"]): return
+        if not self._check_ex_directory(root_dir, "ex0", exercise_label): return
+
+        try:
+            cmd = [sys.executable, "battle.py"]
+            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
+
+            required = [
+                "Flameling", "Pyrodon", "Aquabub", "Torragon",
+                "Fire type", "Water type",
+                "factory", "battle"
+            ]
+
+            missing = [r for r in required if r.lower() not in out.lower()]
+            if not missing:
+                console.print("[green]OK[/green]")
+            else:
+                 console.print("[red]KO (Output Mismatch)[/red]")
+                 self.record_error(exercise_label, "Output Error", f"Missing keywords showing Abstract Factory usage: {missing}\nGot:\n{out}")
+
+        except Exception as e:
+             console.print(f"[red]KO (Execution Error: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
+
+    def test_capabilities(self):
+        console.print("\n[bold]Testing Exercise 1: Capabilities[/bold]")
+        exercise_label = "Exercise 1"
+        root_dir = self._find_root_dir()
+        script_path = os.path.join(root_dir, "capacitor.py")
+        
+        if not os.path.exists(script_path):
+             console.print("[red]KO (Missing File)[/red]")
+             return
+            
+        if not self.common_strict_check(script_path, exercise_label, extra_imports=["ex0", "ex1", "ex2"]): return
+        if not self._check_ex_directory(root_dir, "ex1", exercise_label): return
+
+        try:
+            cmd = [sys.executable, "capacitor.py"]
+            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
+
+            required = [
+                "Sproutling", "Grass type",
+                "Bloomelle", "heal",
+                "Shiftling", "Normal type",
+                "Morphagon", "transform",
+                "revert"
+            ]
+
+            missing = [r for r in required if r.lower() not in out.lower()]
+            if not missing:
+                console.print("[green]OK[/green]")
+            else:
+                 console.print("[red]KO (Output Mismatch)[/red]")
+                 self.record_error(exercise_label, "Output Error", f"Missing capabilities output: {missing}\nGot:\n{out}")
+
+        except Exception as e:
+             console.print(f"[red]KO (Execution Error: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
+
+    def test_abstract_strategy(self):
+        console.print("\n[bold]Testing Exercise 2: Abstract Strategy[/bold]")
+        exercise_label = "Exercise 2"
+        root_dir = self._find_root_dir()
+        script_path = os.path.join(root_dir, "tournament.py")
+        
+        if not os.path.exists(script_path):
+             console.print("[red]KO (Missing File)[/red]")
+             return
+            
+        if not self.common_strict_check(script_path, exercise_label, extra_imports=["ex0", "ex1", "ex2"]): return
+        if not self._check_ex_directory(root_dir, "ex2", exercise_label): return
+
+        try:
+            cmd = [sys.executable, "tournament.py"]
+            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+            out = result.stdout + result.stderr
+            if self.check_for_crash(out, exercise_label): return
+
+            required = [
+                "tournament", "battle", "vs"
+            ]
+
+            missing = [r for r in required if r.lower() not in out.lower()]
+            
+            # Check for error handling of invalid strategy
+            # The PDF mentions "If the act method is called with an invalid combination, a dedicated exception is raised"
+            # And example output shows "Battle error, aborting tournament: Invalid Creature ... for this aggressive strategy"
+            error_caught = "invalid" in out.lower() or "error" in out.lower() or "abort" in out.lower()
+            
+            if not missing and error_caught:
+                console.print("[green]OK[/green]")
+            else:
+                 console.print("[red]KO (Output Mismatch)[/red]")
+                 msg = f"Missing tournament terminology: {missing}" if missing else "Did not detect handling of invalid Creature-strategy tuples."
+                 self.record_error(exercise_label, "Output Error", f"{msg}\nGot:\n{out}")
+
+        except Exception as e:
+             console.print(f"[red]KO (Execution Error: {e})[/red]")
+             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def run(self, exercise_name=None):
-        console.print("[bold cyan]Testing Module 07: DataDeck (Abstract Base Classes)[/bold cyan]")
+        console.print("[bold cyan]Testing Module 07: DataDeck (Abstract Patterns)[/bold cyan]")
         
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
 
-        root_init = os.path.join(os.getcwd(), "__init__.py")
+        # The PDF instructions for Mod07 v3.0 say testing code is at root.
+        root_init = os.path.join(self._find_root_dir(), "__init__.py")
         if not os.path.exists(root_init):
-            console.print("[red]KO[/red] Missing __init__.py at repository root (required by subject).")
-            self.record_error(
-                "Module 07 (repository layout)",
-                "Missing File",
-                "The subject requires __init__.py at the repository root so exercises are "
-                "packages and absolute imports work (e.g. from ex0.Card import Card).",
-            )
+             console.print("[yellow]Warning: Missing __init__.py at repository root. This may cause import issues.[/yellow]")
 
         if exercise_name:
             found = False
@@ -88,8 +224,11 @@ class Tester(BaseTester):
                     f"No exercise matches '{exercise_name}'.",
                 )
         else:
-            for _, func in self.exercises:
-                func()
+            visited = set()
+            for name, func in self.exercises:
+                if func not in visited:
+                    func()
+                    visited.add(func)
             
         if self.grouped_errors:
             console.print()
@@ -99,340 +238,3 @@ class Tester(BaseTester):
                 content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
                 console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
                 console.print()
-
-    # --- Strictness Helpers ---
-    def common_strict_check(self, path, label, extra_funcs=None, extra_imports=None, enforce_try_except=False):
-        allowed_funcs = [
-            "print", "len", "sum", "max", "min", "range", "zip", "enumerate", 
-            "int", "float", "str", "bool", "list", "dict", "set", "tuple",
-            "isinstance", "issubclass", "super", "next", "iter", "all", "any", "id"
-        ]
-        if extra_funcs:
-            allowed_funcs.extend(extra_funcs)
-
-        allowed_imports = ["sys", "abc", "typing", "enum", "random", "datetime"]
-        if extra_imports:
-            allowed_imports.extend(extra_imports)
-
-        style_errors = self.check_flake8(path)
-        if style_errors:
-             console.print("[red]KO[/red]")
-             # Filename is included in the string returned by check_flake8()
-             self.record_error(label, "Style Error (Flake8)", style_errors)
-             return False
-
-        file_prefix = f"[bold cyan]File:[/bold cyan] [cyan]{os.path.basename(path)}[/cyan]\n\n"
-        type_errors = self.check_type_hints(path)
-        if type_errors:
-             console.print("[red]KO (Type Hints)[/red]")
-             self.record_error(label, "Style Error (Missing Type Hints)", file_prefix + type_errors)
-             return False
-
-        return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=enforce_try_except)
-
-    def check_abc_inheritance(self, file_path, class_name, abc_name="ABC"):
-        """Checks if a class inherits from ABC."""
-        try:
-            with open(file_path, "r") as f:
-                tree = ast.parse(f.read())
-            
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef) and node.name == class_name:
-                    for base in node.bases:
-                        if isinstance(base, ast.Name) and base.id == abc_name:
-                            return True
-            return False
-        except:
-            return False
-
-    def _strict_check_exercise_py_files(
-        self,
-        exercise_label: str,
-        ex_dir: str,
-        py_files: list,
-        extra_imports: list | None = None,
-    ) -> bool:
-        """Run flake8, type hints, and verify_strict on each listed file if it exists."""
-        extra = list(extra_imports) if extra_imports else []
-        for fname in py_files:
-            fp = os.path.join(ex_dir, fname)
-            if os.path.exists(fp):
-                if not self.common_strict_check(fp, exercise_label, extra_imports=extra):
-                    return False
-        return True
-
-    # --- Exercise Tests ---
-
-    def test_card_foundation(self):
-        console.print("\n[bold]Testing Exercise 0: Card Foundation[/bold]")
-        exercise_label = "Exercise 0"
-        path = self._load_module_path("ex0")
-        
-        if not path or not os.path.exists(path):
-            console.print("[red]KO (Missing File)[/red]")
-            self.record_error(exercise_label, "Missing File", "Could not find ex0/main.py")
-            return
-
-        ex0_dir = os.path.dirname(path)
-
-        # Card.py: ABC + strictness (subject: Card is abstract base)
-        card_py = os.path.join(ex0_dir, "Card.py")
-        if os.path.exists(card_py):
-            if not self.common_strict_check(card_py, exercise_label):
-                return
-            if not self.check_abc_inheritance(card_py, "Card", "ABC"):
-                console.print("[red]KO (Structure Error)[/red]")
-                self.record_error(exercise_label, "Structure Error", "Card class must inherit from ABC")
-                return
-
-        # Other submitted modules: flake8, type hints, imports (aligns with subject file list)
-        if not self._strict_check_exercise_py_files(
-            exercise_label,
-            ex0_dir,
-            ["CreatureCard.py", "main.py", "__init__.py"],
-            extra_imports=["ex0"],
-        ):
-            return
-
-        import subprocess
-        try:
-            cmd = [sys.executable, "-m", "ex0.main"]
-            # We need to run from the parent of ex0 to support 'from ex0.Card import ...'
-            cwd = os.path.dirname(os.path.dirname(path)) 
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            required = [
-                "=== DataDeck Card Foundation ===",
-                "Testing Abstract Base Class Design:",
-                "CreatureCard Info:",
-                "Fire Dragon",
-                "legendary", # Rarity check (case insensitive usually, but check pdf output) -> 'Legendary'
-                "Play result:",
-                "'card_played': 'Fire Dragon'",
-                "'mana_used': 5",
-                "Attack result:", 
-                "'attacker': 'Fire Dragon'",
-                "'target': 'Goblin Warrior'",
-                "'damage_dealt': 7",
-                "Playable: False"
-            ]
-
-            missing = [r for r in required if r.lower() not in out.lower()]
-            if not missing:
-                console.print("[green]OK[/green]")
-            else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
-
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
-
-    def test_deck_builder(self):
-        console.print("\n[bold]Testing Exercise 1: Deck Builder[/bold]")
-        exercise_label = "Exercise 1"
-        path = self._load_module_path("ex1")
-        
-        if not path or not os.path.exists(path):
-            console.print("[red]KO (Missing File)[/red]")
-            self.record_error(exercise_label, "Missing File", "Could not find ex1/main.py")
-            return
-
-        ex1_dir = os.path.dirname(path)
-        if not self._strict_check_exercise_py_files(
-            exercise_label,
-            ex1_dir,
-            ["SpellCard.py", "ArtifactCard.py", "Deck.py", "main.py", "__init__.py"],
-            extra_imports=["ex0"],
-        ):
-            return
-
-        import subprocess
-        try:
-            cmd = [sys.executable, "-m", "ex1.main"]
-            cwd = os.path.dirname(os.path.dirname(path))
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            required = [
-                "=== DataDeck Deck Builder ===",
-                "Building deck with different card types...",
-                "Deck stats:",
-                "'total_cards': 3",
-                "'creatures': 1",
-                "'spells': 1",
-                "'artifacts': 1",
-                "Drew:",
-                "Play result:",
-                "Same interface, different card behaviors"
-            ]
-
-            missing = [r for r in required if r.lower() not in out.lower()]
-            if not missing:
-                console.print("[green]OK[/green]")
-            else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
-
-    def test_ability_system(self):
-        console.print("\n[bold]Testing Exercise 2: Ability System[/bold]")
-        exercise_label = "Exercise 2"
-        path = self._load_module_path("ex2")
-        
-        if not path or not os.path.exists(path):
-            console.print("[red]KO (Missing File)[/red]")
-            self.record_error(exercise_label, "Missing File", "Could not find ex2/main.py")
-            return
-
-        ex2_dir = os.path.dirname(path)
-        if not self._strict_check_exercise_py_files(
-            exercise_label,
-            ex2_dir,
-            ["Combatable.py", "Magical.py", "EliteCard.py", "main.py", "__init__.py"],
-            extra_imports=["ex0", "ex1"],
-        ):
-            return
-
-        import subprocess
-        try:
-            cmd = [sys.executable, "-m", "ex2.main"]
-            cwd = os.path.dirname(os.path.dirname(path))
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            required = [
-                "=== DataDeck Ability System ===",
-                "EliteCard capabilities:",
-                "- Card:", 
-                "- Combatable:",
-                "- Magical:",
-                "Playing Arcane Warrior",
-                "Combat phase:",
-                "Attack result:", "'damage': 5",
-                "Defense result:", "'still_alive': True",
-                "Magic phase:",
-                "Spell cast:", "'spell': 'Fireball'",
-                "Mana channel:"
-            ]
-
-            missing = [r for r in required if r.lower() not in out.lower()]
-            if not missing:
-                console.print("[green]OK[/green]")
-            else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
-
-    def test_game_engine(self):
-        console.print("\n[bold]Testing Exercise 3: Game Engine[/bold]")
-        exercise_label = "Exercise 3"
-        path = self._load_module_path("ex3")
-        
-        if not path or not os.path.exists(path):
-            console.print("[red]KO (Missing File)[/red]")
-            self.record_error(exercise_label, "Missing File", "Could not find ex3/main.py")
-            return
-
-        ex3_dir = os.path.dirname(path)
-        if not self._strict_check_exercise_py_files(
-            exercise_label,
-            ex3_dir,
-            ["GameStrategy.py", "CardFactory.py", "main.py", "__init__.py"],
-            extra_imports=["ex0", "ex1"],
-        ):
-            return
-
-        import subprocess
-        try:
-            cmd = [sys.executable, "-m", "ex3.main"]
-            cwd = os.path.dirname(os.path.dirname(path))
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            required = [
-                "=== DataDeck Game Engine ===",
-                "Configuring Fantasy Card Game...",
-                "Factory: FantasyCardFactory",
-                "Strategy: AggressiveStrategy",
-                "Available types:",
-                "Simulating aggressive turn...",
-                "Hand:",
-                "Turn execution:",
-                "Actions:",
-                "'damage_dealt': 8",
-                "Game Report:",
-                "Abstract Factory + Strategy Pattern: Maximum flexibility achieved!"
-            ]
-
-            missing = [r for r in required if r.lower() not in out.lower()]
-            if not missing:
-                console.print("[green]OK[/green]")
-            else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
-
-    def test_tournament_platform(self):
-        console.print("\n[bold]Testing Exercise 4: Tournament Platform[/bold]")
-        exercise_label = "Exercise 4"
-        path = self._load_module_path("ex4")
-        
-        if not path or not os.path.exists(path):
-            console.print("[red]KO (Missing File)[/red]")
-            self.record_error(exercise_label, "Missing File", "Could not find ex4/main.py")
-            return
-
-        ex4_dir = os.path.dirname(path)
-        if not self._strict_check_exercise_py_files(
-            exercise_label,
-            ex4_dir,
-            [
-                "Rankable.py",
-                "TournamentCard.py",
-                "TournamentPlatform.py",
-                "main.py",
-                "__init__.py",
-            ],
-            extra_imports=["ex0", "ex1", "ex2", "ex3"],
-        ):
-            return
-
-        import subprocess
-        try:
-            cmd = [sys.executable, "-m", "ex4.main"]
-            cwd = os.path.dirname(os.path.dirname(path))
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            required = [
-                "=== DataDeck Tournament Platform ===",
-                "Registering Tournament Cards...",
-                "Fire Dragon (ID: dragon_001):",
-                "- Interfaces: [Card, Combatable, Rankable]",
-                "- Rating:",
-                "Creating tournament match...",
-                "Match result:",
-                "winner_rating",
-                "Tournament Leaderboard:",
-                "1. Fire Dragon",
-                "Platform Report:",
-                "'platform_status': 'active'"
-            ]
-
-            missing = [r for r in required if r.lower() not in out.lower()]
-            if not missing:
-                console.print("[green]OK[/green]")
-            else:
-                 console.print("[red]KO (Output Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Missing output strings: {missing}\nGot:\n{out}")
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")

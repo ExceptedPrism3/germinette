@@ -31,10 +31,10 @@
 | **Module 02** | 🟢 Ready | Error Handling, Custom Exceptions |
 | **Module 03** | 🟢 Ready | `sys.argv`, Data Structures, Generators |
 | **Module 04** | 🟢 Ready | File Manipulation, Context Managers, Stdin/out |
-| **Module 05** | 🟢 Ready | Polymorphism, ABCs, Protocols |
-| **Module 06** | 🟢 Ready | Advanced Imports, Package Structure, Circular Dependencies |
-| **Module 07** | 🟢 Ready | Python's Magic, Decorators, Inner Functions |
-| **Module 08** | 🟢 Ready | The Life of Data, Typing |
+| **Module 05** | 🟢 Ready | ABCs, Protocols, Duck-typing |
+| **Module 06** | 🟢 Ready | Alembic Scripts, Package Management, Imports |
+| **Module 07** | 🟢 Ready | Abstract Factories, Strategies, Capabilities |
+| **Module 08** | 🟢 Ready | Virtual Environments, Dependency Config |
 | **Module 09** | 🟢 Ready | The Validation, Decorators Pattern |
 | **Module 10** | 🟢 Ready | Functional Power, Functools, Itertools |
 
@@ -206,7 +206,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | | |
 | :--- | :--- |
-| **Latest release (this tree)** | **`v1.6.8`** |
+| **Latest release (this tree)** | **`v1.7.0`** |
 | **Update installed Germinette** | `germinette -u` |
 | **All changes by version** | **[CHANGELOG.md](CHANGELOG.md)** |
 
