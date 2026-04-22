@@ -1,6 +1,6 @@
 import os
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 
 # Local preview of the “update available” footer:
 #   GERMINETTE_DEBUG_REMOTE_VERSION=9.9.9 python3 -m germinette …   # pretend GitHub is newer (any current __version__)

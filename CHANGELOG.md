@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.8.0] - 2026-04-22
+### Added
+- **A-Maze-ing checker (subject-aligned)**: Added full `germinette/subjects/a_maze_ing.py` coverage for mandatory files, Makefile targets, config parsing, README requirements, reusable `mazegen` packaging checks, runtime/output format validation, wall-coherence checks, border-wall checks, 3x3-open-area prevention checks, shortest-path validation, and `PERFECT=True` tree validation on the traversable component.
+- **A-Maze-ing seed safety checks**: Added explicit checks for deterministic behavior when `SEED` is missing/commented, variability when `SEED` is present, and AST-based detection of broken interactive regen logic (`R`) plus invalid `launch(seed=...)` forwarding.
+- **Root test coverage for A-Maze-ing checker**: Added `tests/test_a_maze_ing_checker_seed_logic.py` so seed-logic regressions are tested from the main repository test suite.
+
+### Changed
+- **Module menu and version labeling**: `a_maze_ing` is now listed as fully available in the module picker and labeled with PDF-derived version `v.2.1`.
+- **A-Maze-ing warning UX**: Improved warning section readability and clarified that warnings are non-blocking.
+- **A-Maze-ing package artifact detection**: Checker now accepts real-world `mazegen` artifact names using both hyphen and underscore prefixes (e.g. `mazegen_sabo_gla_bgebreeg-*.whl`).
+
+### Fixed
+- **A-Maze-ing sample project seed forwarding** (`devtools/other/amazing_sabo`): Restored correct UI seed forwarding (`launch(seed=seed)`) so commented/missing `SEED` does not accidentally enable seed increment behavior on regenerate.
+
+## [1.7.1] - 2026-04-21
+### Added
+- **Subject version sync tooling**: Added `scripts/check_subject_updates.py` and `scripts/subject_pdf_urls.json` to compare Module 00-10 subject `Version:` values from official CDN PDFs against `MODULE_VERSION_LABELS`.
+- **Module 02 stricter pedagogical checks** ([#12](https://github.com/ExceptedPrism3/germinette/issues/12), reported by **bgebreeg**): Enforced exception-handling location in Ex0, required natural exception-triggering code + multi-exception tuple handling in Ex2, and enforced one global `try/except/finally` flow with immediate return on error in Ex4.
+- **Module 01 runtime-sanity checks** ([#11](https://github.com/ExceptedPrism3/germinette/issues/11), reported by **muali**): Added static checks for suspicious builtin misuse in `super().__init__(...)` and undefined `self.<attr>` access patterns (with inheritance-aware safeguards).
+
+### Changed
+- **Global style gate**: `BaseTester.check_flake8()` now runs both `flake8` and `mypy`, and reports failures from either checker in one combined diagnostics block.
+- **Module menu labeling**: Module picker shows per-module version suffixes via `MODULE_VERSION_LABELS` and formatting helper.
+
+### Fixed
+- **Module 00/01 v3.0 alignment**: Restored subject-correct exercise mapping (`ft_garden_name` in Mod00 Ex1, strict `show()` expectation in Mod01 Ex1, and minimum plant-output expectations per subject).
+- **A-Maze-ing project robustness** (`devtools/other/amazing_sabo`): Updated non-perfect wall-breaking to prevent creation of forbidden 3x3 fully-open areas while preserving loop generation.
+- **Dev fixtures cleanup and alignment**: Reworked `devtools/test` fixtures for Modules 00, 01, and 02 to match current v3.0 subjects; removed stale shifted files and debug artifacts.
+- **mypy-compatible dev fixtures**: Updated affected fixture files in Modules 02/03/08/10 to pass the new combined `flake8 + mypy` enforcement.
+
 ## [1.7.0] - 2026-04-06
 ### Added
 - **Global v3.0 Compatibility**: Core updater logic (`MODULE_VERSION_LABELS`) properly aligns Module 00 through Module 10 to standard v3.0 specs.

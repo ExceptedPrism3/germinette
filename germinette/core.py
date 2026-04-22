@@ -12,7 +12,7 @@ console = Console()
 
 # Shown in the module picker as ``name - v.X.Y``. Keep aligned with intra PDFs; run
 # ``python scripts/check_subject_updates.py`` against the CDN URLs in
-# ``scripts/subject_pdf_urls.json``. Omit a key (e.g. a_maze_ing) for no suffix.
+# ``scripts/subject_pdf_urls.json``.
 MODULE_VERSION_LABELS: dict[str, str] = {
     "python_module_00": "v.3.0",
     "python_module_01": "v.3.0",
@@ -25,6 +25,7 @@ MODULE_VERSION_LABELS: dict[str, str] = {
     "python_module_08": "v.3.0",
     "python_module_09": "v.3.0",
     "python_module_10": "v.3.0",
+    "a_maze_ing": "v.2.1",
 }
 
 
@@ -197,14 +198,11 @@ class GerminetteRunner:
             console.print("[red]No modules found in subjects directory![/red]")
             return None
         
-        # Hardcode A-Maze-ing for now as it doesn't follow naming convention
+        # Include A-Maze-ing (it does not follow python_module_* naming)
         modules.append("a_maze_ing")
         console.print("[bold]Available Modules:[/bold]")
         for i, mod in enumerate(modules, 1):
             display_name = _format_module_display_name(mod)
-            coming_soon = ["a_maze_ing"]
-            if mod in coming_soon:
-                display_name += " [yellow](Coming Soon 🚧)[/yellow]"
             console.print(f"{i}. {display_name}")
         
         console.print("\n[yellow]Could not auto-detect module in this directory.[/yellow]")
@@ -346,60 +344,66 @@ class BaseTester:
             return f"Error checking docstrings: {e}"
 
     def check_flake8(self, path):
-        """Runs flake8 and returns None if compliant, or error string if violations found."""
+        """Runs flake8 and mypy; returns None only if both pass."""
         import subprocess
         
         try:
-            result = subprocess.run(
+            flake8_result = subprocess.run(
                 [sys.executable, "-m", "flake8", path],
                 capture_output=True,
                 text=True
             )
-            
-            if result.returncode == 0:
+            mypy_result = subprocess.run(
+                [sys.executable, "-m", "mypy", path],
+                capture_output=True,
+                text=True
+            )
+
+            if flake8_result.returncode == 0 and mypy_result.returncode == 0:
                 return None
+
+            abs_path = os.path.normpath(os.path.abspath(path))
+            fname = os.path.basename(abs_path)
+            link_url = _terminal_hyperlink_url_for_file(abs_path)
+            if link_url:
+                file_link = f"[link={link_url}]{escape(fname)}[/link]"
             else:
-                # Parse and clean output
-                # Output format: file:line:col: code message
-                lines = result.stdout.strip().splitlines()
+                file_link = escape(fname)
+            path_hint = f"\n[dim]{escape(abs_path)}[/dim]"
+
+            sections = []
+
+            if flake8_result.returncode != 0:
+                lines = flake8_result.stdout.strip().splitlines()
                 cleaned_lines = []
                 for line in lines:
-                    # Remove file path (keep only line:col: code message)
-                    parts = line.split(':', 1) # Split at first colon (after filename)
+                    parts = line.split(':', 1)
                     if len(parts) > 1:
                         cleaned_lines.append(f"Line {parts[1].strip()}")
                     else:
                         cleaned_lines.append(line)
-
-                abs_path = os.path.normpath(os.path.abspath(path))
-                fname = os.path.basename(abs_path)
-                link_url = _terminal_hyperlink_url_for_file(abs_path)
-                if link_url:
-                    file_link = f"[link={link_url}]{escape(fname)}[/link]"
-                else:
-                    file_link = escape(fname)
-
                 body = "\n".join(escape(line) for line in cleaned_lines)
-                path_hint = f"\n[dim]{escape(abs_path)}[/dim]"
-
-                # VS Code / Cursor: terminal often Ctrl+clicks ``path:line:col`` in plain text
                 open_hint = ""
                 if lines:
                     lc = _flake8_first_line_col(lines[0])
                     if lc:
                         ln, co = lc
                         plink = f"{abs_path}:{ln}:{co}"
-                        open_hint = (
-                            f"\n[dim]Or Ctrl+click:[/dim] [bold]{escape(plink)}[/bold]"
-                        )
+                        open_hint = f"\n[dim]Or Ctrl+click:[/dim] [bold]{escape(plink)}[/bold]"
+                sections.append(f"[bold]Flake8[/bold]{open_hint}\n{body}")
 
-                return (
-                    f"Flake8 — source file: {file_link}"
-                    f"{path_hint}{open_hint}\n\n{body}"
-                )
+            if mypy_result.returncode != 0:
+                mypy_lines = (mypy_result.stdout or mypy_result.stderr).strip().splitlines()
+                mypy_body = "\n".join(escape(line) for line in mypy_lines) if mypy_lines else "mypy failed with no output."
+                sections.append(f"[bold]mypy[/bold]\n{mypy_body}")
+
+            return (
+                f"Style checks — source file: {file_link}"
+                f"{path_hint}\n\n" + "\n\n".join(sections)
+            )
 
         except Exception as e:
-            return f"Error running flake8: {e}"
+            return f"Error running style checks (flake8/mypy): {e}"
 
     # Credit to @eloiberlinger1 (GitHub PR #3) for implementing mandatory type hint checks across module exercises!
     def check_type_hints(self, path):
