@@ -3,6 +3,8 @@ from germinette.utils import IOTester
 from rich.console import Console
 from rich.panel import Panel
 import importlib.util
+import ast
+import builtins
 import sys
 import os
 import inspect
@@ -102,11 +104,112 @@ class Tester(BaseTester):
                  self.record_error(exercise_label, "Style Error (Missing Type Hints)", type_hint_errors)
                  return None, None
 
+            static_sanity = self._static_sanity_checks(found_path)
+            if static_sanity:
+                 console.print("[red]KO[/red]")
+                 self.record_error(exercise_label, "Static Sanity Error", static_sanity)
+                 return None, None
+
             return mod, found_path
         except Exception as e:
             console.print("[red]KO (Import Error)[/red]")
             self.record_error(exercise_label, "Import Error", str(e))
             return None, None
+
+    def _static_sanity_checks(self, path):
+        """
+        Catch common silent false positives:
+        1) passing builtins (hex/list/str/...) as values into super().__init__(...)
+        2) using self.<attr> names that were never assigned anywhere in the class
+        """
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read(), filename=path)
+        except Exception as e:
+            return f"AST parse failed: {e}"
+
+        builtin_names = set(dir(builtins))
+        violations = []
+
+        # 1) Builtin misuse in super().__init__(...)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if not isinstance(func, ast.Attribute) or func.attr != "__init__":
+                continue
+            owner = func.value
+            if not isinstance(owner, ast.Call):
+                continue
+            if not isinstance(owner.func, ast.Name) or owner.func.id != "super":
+                continue
+
+            for arg in node.args:
+                if isinstance(arg, ast.Name) and arg.id in builtin_names:
+                    violations.append(
+                        f"Line {node.lineno}: suspicious builtin '{arg.id}' passed to super().__init__(...)"
+                    )
+
+        # 2) Undefined self.<attr> usage in classes
+        for cls in [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]:
+            # Only validate classes that define their own __init__.
+            # Subclasses often read inherited attributes set by parent __init__.
+            method_names = {
+                n.name for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            nested_class_names = {
+                n.name for n in cls.body if isinstance(n, ast.ClassDef)
+            }
+            if "__init__" not in method_names:
+                continue
+            # If __init__ delegates to super().__init__(...), parent class owns
+            # core attribute assignment (common in this module), so skip this
+            # undefined-attribute heuristic for that class.
+            has_super_init_call = False
+            for node in cls.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "__init__":
+                    for sub in ast.walk(node):
+                        if not isinstance(sub, ast.Call):
+                            continue
+                        func = sub.func
+                        if not isinstance(func, ast.Attribute) or func.attr != "__init__":
+                            continue
+                        if (
+                            isinstance(func.value, ast.Call)
+                            and isinstance(func.value.func, ast.Name)
+                            and func.value.func.id == "super"
+                        ):
+                            has_super_init_call = True
+                            break
+                if has_super_init_call:
+                    break
+            if has_super_init_call:
+                continue
+
+            assigned = set()
+            used = []
+
+            for n in ast.walk(cls):
+                if not isinstance(n, ast.Attribute):
+                    continue
+                if not isinstance(n.value, ast.Name) or n.value.id != "self":
+                    continue
+                if isinstance(n.ctx, ast.Store):
+                    assigned.add(n.attr)
+                elif isinstance(n.ctx, ast.Load):
+                    used.append((n.attr, n.lineno))
+
+            for attr, lineno in used:
+                if attr in method_names or attr in nested_class_names:
+                    continue
+                if attr not in assigned:
+                    violations.append(
+                        f"Line {lineno}: self.{attr} is used but never assigned in class {cls.name}"
+                    )
+
+        if violations:
+            return "\n".join(violations)
+        return None
 
     # Credit to @eloiberlinger1 (GitHub PR #2) for improving Module 01 error handling and class/method validation!
     def test_garden_intro(self):
@@ -165,7 +268,7 @@ class Tester(BaseTester):
 
             Plant = mod.Plant
 
-            # v3.0: Plant class must have show() method
+            # v3.0: Plant class must have show() method.
             p = Plant("Test", 10, 5)
             if not hasattr(p, 'show'):
                 self.record_error(label, "Missing Method",
@@ -178,7 +281,7 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # v3.0 expects at least 3 plants displayed
+            # v3.0 expects at least 3 plants displayed.
             # Format: "Name: Xcm, Y days old"
             line_count = 0
             for line in output.strip().split("\n"):

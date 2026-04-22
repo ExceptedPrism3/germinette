@@ -1,6 +1,7 @@
 import sys
 import os
 import importlib.util
+import ast
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
@@ -23,6 +24,22 @@ class Tester(BaseTester):
         if exercise_label not in self.grouped_errors:
             self.grouped_errors[exercise_label] = []
         self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
+
+    def _parse_tree(self, path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return ast.parse(f.read(), filename=path)
+        except Exception as e:
+            return None
+
+    @staticmethod
+    def _func_node(tree, name):
+        if tree is None:
+            return None
+        for n in ast.walk(tree):
+            if isinstance(n, ast.FunctionDef) and n.name == name:
+                return n
+        return None
 
     def _load_module(self, module_name, exercise_label):
         cwd = os.getcwd()
@@ -145,6 +162,29 @@ class Tester(BaseTester):
                               "Missing mandatory function 'test_temperature()'")
             return
 
+        # Subject strictness: exception handling must be in test_temperature(),
+        # not hidden inside input_temperature().
+        tree = self._parse_tree(path)
+        in_func = self._func_node(tree, "input_temperature")
+        test_func = self._func_node(tree, "test_temperature")
+        if in_func and any(isinstance(n, ast.Try) for n in ast.walk(in_func)):
+            console.print("[red]KO (Exception Handling Location)[/red]")
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                "input_temperature() should only convert/return.\n"
+                "Catch failures in test_temperature() as required by subject.",
+            )
+            return
+        if test_func and not any(isinstance(n, ast.Try) for n in ast.walk(test_func)):
+            console.print("[red]KO (Missing try/except in test_temperature)[/red]")
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                "test_temperature() must handle input_temperature() failures with try/except.",
+            )
+            return
+
         func = mod.input_temperature
 
         # Test valid input
@@ -160,14 +200,19 @@ class Tester(BaseTester):
             console.print(f"[red]KO (Crash on '25')[/red]")
             self.record_error(exercise_label, "Crash", f"Input: '25'\nException: {e}")
 
-        # Test invalid input — should not crash
+        # Test invalid input — input_temperature is expected to fail on bad data.
+        # The pedagogical goal is to catch this in test_temperature().
         try:
             func("abc")
-            console.print("[green]OK ('abc' — Handled)[/green]")
-        except Exception as e:
-            console.print(f"[red]KO ('abc' — Crashed)[/red]")
-            self.record_error(exercise_label, "Crash",
-                              f"Input: 'abc'\nProgram must not crash on invalid input.\nException: {e}")
+            console.print("[red]KO ('abc' — No exception)[/red]")
+            self.record_error(
+                exercise_label,
+                "Missing Failure",
+                "input_temperature('abc') should raise on invalid data; "
+                "test_temperature() must catch it.",
+            )
+        except Exception:
+            console.print("[green]OK ('abc' — Raises, caught at test level)[/green]")
 
         # Script execution check
         output = self._run_script(path)
@@ -287,6 +332,41 @@ class Tester(BaseTester):
             console.print("[red]KO (Missing Test Function)[/red]")
             self.record_error(exercise_label, "Structure Error",
                               "Missing mandatory function 'test_error_types()'")
+            return
+
+        tree = self._parse_tree(path)
+        op_func = self._func_node(tree, "garden_operations")
+        test_func = self._func_node(tree, "test_error_types")
+
+        # Subject strictness: faulty code should naturally raise exceptions
+        # (no manual `raise` inside garden_operations()).
+        if op_func and any(isinstance(n, ast.Raise) for n in ast.walk(op_func)):
+            console.print("[red]KO (Manual raise in garden_operations)[/red]")
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                "garden_operations() should trigger real faulty operations "
+                "(int('abc'), 1/0, open(missing), bad type mixing), not manual raise.",
+            )
+            return
+
+        # Subject strictness: demonstrate catching multiple exceptions in one except.
+        has_multi_except = False
+        if test_func:
+            for n in ast.walk(test_func):
+                if not isinstance(n, ast.ExceptHandler):
+                    continue
+                if isinstance(n.type, ast.Tuple) and len(n.type.elts) >= 2:
+                    has_multi_except = True
+                    break
+        if not has_multi_except:
+            console.print("[red]KO (Missing multi-exception except block)[/red]")
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                "test_error_types() must include at least one except block "
+                "catching multiple exception types together (except (...)).",
+            )
             return
 
         # v3.0: garden_operations(operation_number) with int 0-3
@@ -440,6 +520,46 @@ class Tester(BaseTester):
                               "test_watering_system() not found")
             console.print("[red]KO (Missing Test Function)[/red]")
             return
+
+        tree = self._parse_tree(path)
+        test_func = self._func_node(tree, "test_watering_system")
+        if test_func:
+            # Subject strictness: one global try/except/finally.
+            top_level_tries = [n for n in test_func.body if isinstance(n, ast.Try)]
+            if len(top_level_tries) != 1:
+                console.print("[red]KO (Control Flow)[/red]")
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "test_watering_system() must use one global try/except/finally block.",
+                )
+                return
+            # Not try/except inside loop.
+            for n in ast.walk(test_func):
+                if isinstance(n, (ast.For, ast.While)) and any(
+                    isinstance(sub, ast.Try) for sub in ast.walk(n)
+                ):
+                    console.print("[red]KO (try in loop)[/red]")
+                    self.record_error(
+                        exercise_label,
+                        "Structure Error",
+                        "Do not place try/except/finally inside a loop for this exercise.",
+                    )
+                    return
+            # Must return immediately on error path.
+            has_return_in_except = any(
+                isinstance(sub, ast.Return)
+                for h in top_level_tries[0].handlers
+                for sub in ast.walk(h)
+            )
+            if not has_return_in_except:
+                console.print("[red]KO (No immediate return on error)[/red]")
+                self.record_error(
+                    exercise_label,
+                    "Control Flow Error",
+                    "On invalid plant, test must stop and return to main from except block.",
+                )
+                return
 
         # Script execution — v3.0 specific output
         output = self._run_script(path)
