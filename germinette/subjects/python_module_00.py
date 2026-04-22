@@ -192,7 +192,8 @@ class Tester(BaseTester):
         console.print("\n[bold]Testing Exercise 1: ft_garden_name[/bold]")
         exercise_label = "Exercise 1"
         func = self._load_func("ft_garden_name", exercise_label)
-        if not func: return
+        if not func:
+            return
 
         test_cases = [
             ("Community Garden", "Garden: Community Garden\nStatus: Growing well!"),
@@ -203,16 +204,22 @@ class Tester(BaseTester):
         for garden_name, expected in test_cases:
             try:
                 output = IOTester.run_function(func, inputs=[garden_name])
-                # Check that both lines are present
                 if f"Garden: {garden_name}" in output and "Status: Growing well!" in output:
                     console.print(f"[green]OK ({garden_name})[/green]")
                 else:
                     console.print(f"[red]KO ({garden_name})[/red]")
-                    self.record_error(exercise_label, f"Failed Case (Input: {garden_name})",
-                                     f"Expected:\n{expected}\nGot:\n{output}")
-            except Exception as e:
+                    self.record_error(
+                        exercise_label,
+                        f"Failed Case (Input: {garden_name})",
+                        f"Expected:\n{expected}\nGot:\n{output}",
+                    )
+            except Exception:
                 console.print(f"[red]KO[/red]")
-                self.record_error(exercise_label, f"Runtime Error (Input: {garden_name})", traceback.format_exc())
+                self.record_error(
+                    exercise_label,
+                    f"Runtime Error (Input: {garden_name})",
+                    traceback.format_exc(),
+                )
 
     def test_plot_area(self):
         console.print("\n[bold]Testing Exercise 2: ft_plot_area[/bold]")
