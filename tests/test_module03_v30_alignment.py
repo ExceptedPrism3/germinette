@@ -18,6 +18,68 @@ def _assert_ok(tester, label: str) -> None:
     assert not errors, f"{label} should pass but failed with:\n{errors}"
 
 
+def test_module03_ex3_accepts_achievement_hunter_v30_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from germinette.subjects.python_module_03 import Tester
+
+    # Minimal subject-shaped solution: four named players, required labels, set ops.
+    _write(
+        tmp_path / "ex3" / "ft_achievement_tracker.py",
+        """
+        from __future__ import annotations
+
+        import random
+
+        # Pool: split a string (avoids range/list calls for strict checker).
+        _POOL: list[str] = (
+            "A0 A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19"
+            " A20 A21 A22 A23 A24 A25 A26 A27 A28 A29 A30 A31 A32 A33 A34 A35 A36"
+            " A37 A38 A39"
+        ).split()
+
+
+        def gen_player_achievements() -> set[str]:
+            n: int = random.randint(4, 12)
+            return set(random.sample(_POOL, n))
+
+
+        def main() -> None:
+            random.seed(0)
+            players: list[str] = ["Alice", "Bob", "Charlie", "Dylan"]
+            by_player: dict[str, set[str]] = {}
+            print("=== Achievement Tracker System ===")
+            for name in players:
+                s: set[str] = gen_player_achievements()
+                by_player[name] = s
+                print(f"Player {name}: {s}")
+
+            all_ach: set[str] = set().union(*by_player.values())
+            print(f"All distinct achievements: {all_ach}")
+            all_sets: list[set[str]] = [by_player[p] for p in players]
+            common: set[str] = set.intersection(*all_sets)
+            print(f"Common achievements: {common}")
+
+            for p in players:
+                others: list[set[str]] = [by_player[o] for o in players if o != p]
+                only_p: set[str] = by_player[p] - set().union(*others)
+                print(f"Only {p} has: {only_p}")
+            for p in players:
+                missing: set[str] = all_ach - by_player[p]
+                print(f"{p} is missing: {missing}")
+
+
+        if __name__ == "__main__":
+            main()
+        """,
+    )
+
+    monkeypatch.chdir(tmp_path)
+    tester = Tester()
+    tester.test_achievement_tracker()
+    _assert_ok(tester, "Exercise 3")
+
+
 def test_module03_ex2_allows_round_and_math_import(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from germinette.subjects.python_module_03 import Tester
 

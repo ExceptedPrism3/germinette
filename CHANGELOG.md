@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.2] - 2026-04-24
+### Fixed
+- **Module 03 Ex3 (Achievement Hunter) v3.0 checker** ([#14](https://github.com/ExceptedPrism3/germinette/issues/14), reported by **koldoest26**): `ft_achievement_tracker` is now validated against **Data Quest v3.0** (four players Alice–Dylan, `All distinct achievements:` / `Common achievements:` / `Only <name> has:` / `<name> is missing:`) instead of legacy phrases (`Common to all players:`, `Total unique achievements:`, etc.). Stricter import list for this exercise now matches the subject (only `random`, not `sys`).
+
 ## [1.8.1] - 2026-04-23
 ### Fixed
 - **Module 03 v3.0 checker alignment** ([#13](https://github.com/ExceptedPrism3/germinette/issues/13), reported by **koldoest26**): Updated Data Quest checks to match subject v3.0 by allowing `round()` in Ex2, requiring the Ex4 header `=== Inventory System Analysis ===`, replacing outdated Ex5 damage/items expectations with player-action stream validation, and allowing `random` + list/dict comprehension validation flow in Ex6.
