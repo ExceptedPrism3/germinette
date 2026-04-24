@@ -256,28 +256,52 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_achievement_tracker", exercise_label)
         if not status: return
 
-        if not self.verify_strict(path, exercise_label, ["set", "len", "print"], allowed_imports=["sys", "random"]): return
+        # v3.0 alignment (Issue #14, reported by koldoest26):
+        # Data Quest v3.0 — Achievement Hunter: four players, fixed output labels; subject PDF
+        # authorizes: len(), print(), import random, random.*, set(), set.union() /
+        # set.intersection() / set.difference() (no sys.argv exercise).
+        if not self.verify_strict(
+            path, exercise_label, ["set", "len", "print"], allowed_imports=["random"]
+        ):
+            return
 
         out = self._run_script_args(path, [])
-        if self.check_for_crash(out, exercise_label): return
-        
+        if self.check_for_crash(out, exercise_label):
+            return
+
         if "=== Achievement Tracker System ===" not in out:
-             console.print("[red]KO (Missing Header)[/red]")
-             self.record_error(exercise_label, "Output Error", "Missing header.")
-             return
-            
-        # v3.0: Uses random achievements, so we just check for expected output phrases/structure.
-        conditions = [
-             "Common to all players:" in out,
-             "Total unique achievements:" in out,
-             "Only in" in out  # symmetric difference demo
+            console.print("[red]KO (Missing Header)[/red]")
+            self.record_error(
+                exercise_label, "Output Error", "Missing '=== Achievement Tracker System ==='."
+            )
+            return
+
+        required_lines: list[str] = [
+            "Player Alice:",
+            "Player Bob:",
+            "Player Charlie:",
+            "Player Dylan:",
+            "All distinct achievements:",
+            "Common achievements:",
+            "Only Alice has:",
+            "Only Bob has:",
+            "Only Charlie has:",
+            "Only Dylan has:",
+            "Alice is missing:",
+            "Bob is missing:",
+            "Charlie is missing:",
+            "Dylan is missing:",
         ]
-        
-        if all(conditions):
-             console.print("[green]OK (Set Operations)[/green]")
+        missing = [s for s in required_lines if s not in out]
+        if not missing:
+            console.print("[green]OK (Set Operations v3.0)[/green]")
         else:
-             console.print("[red]KO (Set Operations)[/red]")
-             self.record_error(exercise_label, "Logic Error", f"Missing some set operation outputs. Got:\n{out}")
+            console.print("[red]KO (Set Operations v3.0)[/red]")
+            self.record_error(
+                exercise_label,
+                "Logic Error",
+                f"Missing v3.0 output markers: {missing!r}.\nGot:\n{out}",
+            )
 
     def test_inventory_system(self):
         console.print("\n[bold]Testing Exercise 4: ft_inventory_system[/bold]")
