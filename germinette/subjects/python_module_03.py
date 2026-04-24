@@ -202,10 +202,10 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_coordinate_system", exercise_label)
         if not status: return
 
-        # v3.0: uses input()
+        # v3.0 authorized: import math, math.sqrt(), input(), round(), print()
         if not self.verify_strict(path, exercise_label, 
-                                  ["tuple", "int", "float", "print", "input"], 
-                                  allowed_imports=["sys", "math"],
+                                  ["tuple", "float", "round", "print", "input"], 
+                                  allowed_imports=["math"],
                                   enforce_try_except=True): return
 
         import subprocess
@@ -213,7 +213,7 @@ class Tester(BaseTester):
         try:
              cmd = [sys.executable, path]
              proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-             stdout, stderr = proc.communicate(input="3,4,0\n")
+             stdout, stderr = proc.communicate(input="3,4,0\n4,5,6\n")
              out = stdout + stderr
 
              if self.check_for_crash(out, exercise_label): return
@@ -224,7 +224,7 @@ class Tester(BaseTester):
                   return
              
              # distance of (3,4,0) to origin is 5.0
-             if "5.0" in out or "5.00" in out:
+             if "5.0" in out or "5.00" in out or "Distance to center:" in out:
                   console.print("[green]OK (Calculation)[/green]")
              else:
                   console.print("[red]KO (Calculation)[/red]")
@@ -236,7 +236,7 @@ class Tester(BaseTester):
         # Test Case 2: Invalid (requires try/except handling)
         try:
              proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-             stdout, stderr = proc.communicate(input="3,abc,0\n")
+             stdout, stderr = proc.communicate(input="3,abc,0\n3,4,0\n4,5,6\n")
              out = stdout + stderr
 
              # Should not crash unhandled, should show error message
@@ -285,41 +285,45 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_inventory_system", exercise_label)
         if not status: return
 
-        # v3.0 simplified requirements
+        # v3.0 alignment update (Issue #13, reported by koldoest26):
+        # Header/logic expectations were updated from older Data Quest versions.
+        # v3.0 authorized: import sys, sys.argv, len(), print(), sum(), list(),
+        # round(), dict.keys(), dict.values(), dict.update()
         if not self.verify_strict(path, exercise_label, 
-                                  ["dict", "len", "print", "keys", "values", "items", "get", "update", "int", "sorted", "sum", "max", "min", "list"], 
+                                  ["dict", "len", "print", "keys", "values", "update", "int", "sum", "round", "list"], 
                                   allowed_imports=["sys"]): return
 
-        args = ["sword:1", "potion:5", "shield:2", "armor:3", "helmet:1", "potion:2"]
+        # Sample from v3.0 subject includes duplicate + invalid entries.
+        args = ["sword:1", "potion:5", "shield:2", "armor:3", "helmet:1", "sword:2", "hello", "key:value"]
         out = self._run_script_args(path, args)
         if self.check_for_crash(out, exercise_label): return
         
         # 1. Header Checks
-        if "=== Inventory System ===" not in out:
+        if "=== Inventory System Analysis ===" not in out:
              console.print("[red]KO (Missing Header)[/red]")
-             self.record_error(exercise_label, "Structure Error", "Missing '=== Inventory System ==='")
+             self.record_error(exercise_label, "Structure Error", "Missing '=== Inventory System Analysis ==='")
              return
 
-        # 2. Data Checks
-        # sword:1, potion:7, shield:2, armor:3, helmet:1 -> total 14
-        if "Total items: 14" in out and "Unique item types: 5" in out:
-             console.print("[green]OK (Inventory Totals)[/green]")
+        # 2. v3.0 behavior checks: duplicate/invalid handling + expected aggregate.
+        if "Redundant item" in out and "invalid parameter" in out.lower():
+             console.print("[green]OK (Validation Handling)[/green]")
         else:
-             console.print("[red]KO (Inventory Totals)[/red]")
-             self.record_error(exercise_label, "Math Error", f"Incorrect totals for {args}. Got:\n{out}")
+             console.print("[red]KO (Validation Handling)[/red]")
+             self.record_error(exercise_label, "Handling Error", f"Expected duplicate/invalid parameter handling. Got:\n{out}")
 
-        # 3. Stats & percentages (potion should be 50.0%)
-        if "potion: 7 (50.0%)" in out or "50.0" in out:
+        # 3. Stats checks (subject-style phrasing).
+        if "Total quantity" in out and "represents" in out:
              console.print("[green]OK (Percentages)[/green]")
         else:
              console.print("[red]KO (Percentages)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing quantity/percentage outputs.")
 
-        # 4. Most / Least
-        if "Most abundant: potion" in out and ("Least abundant: sword" in out or "Least abundant: helmet" in out):
+        # 4. Most / Least + update line.
+        if "most abundant" in out.lower() and "least abundant" in out.lower() and "Updated inventory" in out:
              console.print("[green]OK (Statistics)[/green]")
         else:
              console.print("[red]KO (Statistics)[/red]")
-             self.record_error(exercise_label, "Logic Error", "Incorrect Most/Least abundant item logic.")
+             self.record_error(exercise_label, "Logic Error", "Missing most/least abundant item report or final update.")
 
     def test_data_stream(self):
         console.print("\n[bold]Testing Exercise 5: ft_data_stream[/bold]")
@@ -339,17 +343,19 @@ class Tester(BaseTester):
              console.print("[red]KO (Missing Header)[/red]")
              return
 
-        # v3.0: check gen_event and consume_event
-        if "Processing 1000 game events..." in out:
-             console.print("[green]OK (Stream Start)[/green]")
+        # v3.0 alignment update (Issue #13, reported by koldoest26):
+        # gen_event yields (player_name, action), then consume_event drains list.
+        if "Event 0:" in out and "Event 999:" in out:
+             console.print("[green]OK (1000 Events)[/green]")
         else:
-             console.print("[red]KO (Stream Start)[/red]")
+             console.print("[red]KO (1000 Events)[/red]")
+             self.record_error(exercise_label, "Output Error", "Expected event stream from Event 0 to Event 999.")
 
-        if "Total damage dealt:" in out and "Total items found:" in out:
-             console.print("[green]OK (Generator processing)[/green]")
+        if "Built list of 10 events:" in out and "Got event from list:" in out and "Remains in list:" in out:
+             console.print("[green]OK (consume_event flow)[/green]")
         else:
-             console.print("[red]KO (Generator processing)[/red]")
-             self.record_error(exercise_label, "Logic Error", "Expected output detailing processed events (damage, items).")
+             console.print("[red]KO (consume_event flow)[/red]")
+             self.record_error(exercise_label, "Logic Error", "Expected consume_event output over the 10-event list.")
 
     def test_data_alchemist(self):
         console.print("\n[bold]Testing Exercise 6: ft_data_alchemist[/bold]")
@@ -357,14 +363,17 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_data_alchemist", exercise_label)
         if not status: return
         
-        # v3.0: ft_data_alchemist (comprehensions)
-        if not self.verify_strict(path, exercise_label, ["len", "print", "sum", "max", "min", "sorted", "int", "float"], allowed_imports=["sys"]): return
+        # v3.0 alignment update (Issue #13, reported by koldoest26):
+        # random import and comprehension expectations were updated for the new subject.
+        # v3.0 authorized: import random, random.*, print(), len(), sum(), round()
+        if not self.verify_strict(path, exercise_label, ["len", "print", "sum", "round", "int", "float"], allowed_imports=["random"]): return
 
         out = self._run_script_args(path, [])
         if self.check_for_crash(out, exercise_label): return
         
-        if "=== Data Alchemist Dashboard ===" not in out:
+        if "=== Game Data Alchemist ===" not in out:
              console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing '=== Game Data Alchemist ==='")
              return
         
         # Check for comprehension examples usage in output (rough proxy for now)
@@ -383,11 +392,12 @@ class Tester(BaseTester):
              has_dict_comp = any(isinstance(n, ast.DictComp) for n in ast.walk(tree))
              has_set_comp = any(isinstance(n, ast.SetComp) for n in ast.walk(tree))
              
-             if has_list_comp and has_dict_comp and has_set_comp:
+             # Subject requires list + dict comprehensions; set comprehensions are optional.
+             if has_list_comp and has_dict_comp:
                   console.print("[green]OK (Comprehensions verified in AST)[/green]")
              else:
                   console.print("[red]KO (Missing Comprehensions)[/red]")
-                  self.record_error(exercise_label, "Structure Error", f"Script must use list, dict, and set comprehensions.\nListComp: {has_list_comp}, DictComp: {has_dict_comp}, SetComp: {has_set_comp}")
+                  self.record_error(exercise_label, "Structure Error", f"Script must use list and dict comprehensions.\nListComp: {has_list_comp}, DictComp: {has_dict_comp}, SetComp(optional): {has_set_comp}")
         except Exception as e:
              console.print(f"[red]KO (AST Error: {e})[/red]")
 

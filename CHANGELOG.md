@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.1] - 2026-04-23
+### Fixed
+- **Module 03 v3.0 checker alignment** ([#13](https://github.com/ExceptedPrism3/germinette/issues/13), reported by **koldoest26**): Updated Data Quest checks to match subject v3.0 by allowing `round()` in Ex2, requiring the Ex4 header `=== Inventory System Analysis ===`, replacing outdated Ex5 damage/items expectations with player-action stream validation, and allowing `random` + list/dict comprehension validation flow in Ex6.
+
 ## [1.8.0] - 2026-04-22
 ### Added
 - **A-Maze-ing checker (subject-aligned)**: Added full `germinette/subjects/a_maze_ing.py` coverage for mandatory files, Makefile targets, config parsing, README requirements, reusable `mazegen` packaging checks, runtime/output format validation, wall-coherence checks, border-wall checks, 3x3-open-area prevention checks, shortest-path validation, and `PERFECT=True` tree validation on the traversable component.
