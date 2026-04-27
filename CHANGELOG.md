@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.3] - 2026-04-27
+### Fixed
+- **Module 08 v3.0 checker compliance hardening**: Aligned `python_module_08` checks with subject expectations across all exercises. Ex0 now validates mandatory matrix/venv markers and mode-specific guidance/details; Ex1 now enforces required dependency artifacts (`requirements.txt` + `pyproject.toml`), numpy-driven dataset intent, and explicit pip/Poetry comparison while allowing only import-related style/type noise as permitted by the subject; Ex2 now enforces required `.env.example` keys (`MATRIX_MODE`, `DATABASE_URL`, `API_KEY`, `LOG_LEVEL`, `ZION_ENDPOINT`) plus visible dev/prod output differences through environment-driven runs.
+- **Root regression coverage for Module 08 checker**: Added `tests/test_module08_v30_alignment.py` to lock the updated v3.0 behavior and prevent reintroduction of partial or legacy checks.
+
 ## [1.8.2] - 2026-04-24
 ### Fixed
 - **Module 03 Ex3 (Achievement Hunter) v3.0 checker** ([#14](https://github.com/ExceptedPrism3/germinette/issues/14), reported by **koldoest26**): `ft_achievement_tracker` is now validated against **Data Quest v3.0** (four players Alice–Dylan, `All distinct achievements:` / `Common achievements:` / `Only <name> has:` / `<name> is missing:`) instead of legacy phrases (`Common to all players:`, `Total unique achievements:`, etc.). Stricter import list for this exercise now matches the subject (only `random`, not `sys`).
