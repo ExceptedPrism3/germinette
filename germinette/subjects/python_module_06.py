@@ -3,7 +3,7 @@ import subprocess
 import sys
 import ast
 import os
-from typing import List
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 
@@ -27,6 +27,32 @@ class Tester(BaseTester):
             ("ft_kaboom_1", self.test_kaboom_1),
         ]
         self.grouped_errors = {}
+        self.required_paths = [
+            "elements.py",
+            "alchemy/__init__.py",
+            "alchemy/elements.py",
+            "alchemy/potions.py",
+            "alchemy/transmutation/__init__.py",
+            "alchemy/transmutation/recipes.py",
+            "alchemy/grimoire/__init__.py",
+            "alchemy/grimoire/light_spellbook.py",
+            "alchemy/grimoire/light_validator.py",
+            "alchemy/grimoire/dark_spellbook.py",
+            "alchemy/grimoire/dark_validator.py",
+            "ft_alembic_0.py",
+            "ft_alembic_1.py",
+            "ft_alembic_2.py",
+            "ft_alembic_3.py",
+            "ft_alembic_4.py",
+            "ft_alembic_5.py",
+            "ft_distillation_0.py",
+            "ft_distillation_1.py",
+            "ft_transmutation_0.py",
+            "ft_transmutation_1.py",
+            "ft_transmutation_2.py",
+            "ft_kaboom_0.py",
+            "ft_kaboom_1.py",
+        ]
 
     def record_error(self, exercise_label, error_type, message):
         if exercise_label not in self.grouped_errors:
@@ -58,6 +84,9 @@ class Tester(BaseTester):
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Style Error (Type Hints)", type_errors)
              return None, None
+        if not self.check_imports_are_project_local(found_path, exercise_label):
+             console.print("[red]KO (Forbidden Import)[/red]")
+             return None, None
             
         return "FOUND", found_path 
 
@@ -66,6 +95,7 @@ class Tester(BaseTester):
         
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
+        self.check_required_structure()
 
         exercises_to_run = self.exercises
         if exercise_name:
@@ -113,6 +143,69 @@ class Tester(BaseTester):
             return True
         except Exception as e:
             console.print(f"[red]KO (AST Error: {e})[/red]")
+            return False
+
+    def check_required_structure(self):
+        missing = [p for p in self.required_paths if not os.path.exists(p)]
+        if not missing:
+            return True
+        self.record_error(
+            "Project Structure",
+            "Missing Mandatory Files",
+            "Module 06 required tree is incomplete.\nMissing:\n- "
+            + "\n- ".join(missing),
+        )
+        return False
+
+    def _allowed_local_import_roots(self):
+        roots = set()
+        cwd = Path(os.getcwd())
+        for py in cwd.rglob("*.py"):
+            rel = py.relative_to(cwd)
+            if rel.name == "__init__.py":
+                parts = rel.parts[:-1]
+            else:
+                parts = rel.parts
+            if not parts:
+                continue
+            if len(parts) == 1:
+                roots.add(parts[0].replace(".py", ""))
+            else:
+                roots.add(parts[0])
+        # typing is commonly used for hints and Protocol-like structure docs.
+        roots.add("typing")
+        return roots
+
+    def check_imports_are_project_local(self, path, exercise_label):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            allowed_roots = self._allowed_local_import_roots()
+            bad = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        root = alias.name.split(".")[0]
+                        if root not in allowed_roots:
+                            bad.append(alias.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level > 0:
+                        continue
+                    if node.module:
+                        root = node.module.split(".")[0]
+                        if root not in allowed_roots:
+                            bad.append(node.module)
+            if bad:
+                self.record_error(
+                    exercise_label,
+                    "Forbidden Import",
+                    "Only imports of modules/files created in this project are "
+                    f"allowed.\nForbidden imports: {sorted(set(bad))}",
+                )
+                return False
+            return True
+        except Exception as e:
+            self.record_error(exercise_label, "AST Error", f"Import scan failed: {e}")
             return False
 
     def check_import_type(self, path, exercise_label, require_from=False, forbidden_module=None):

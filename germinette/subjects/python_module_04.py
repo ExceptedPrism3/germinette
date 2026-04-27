@@ -1,6 +1,7 @@
 import sys
 import os
 import ast
+import importlib.util
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
@@ -136,14 +137,47 @@ class Tester(BaseTester):
 
     # --- Exercise Tests ---
 
+    def _enforce_no_with_before_ex3(self, path, exercise_label):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            has_with = any(isinstance(node, ast.With) for node in ast.walk(tree))
+            if has_with:
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "The 'with' statement is introduced in Exercise 3 only and "
+                    "must not be used before then.",
+                )
+                return False
+        except Exception:
+            pass
+        return True
+
+    def _load_module_object(self, path):
+        module_name = f"_germinette_mod04_{os.path.basename(path).replace('.py', '')}"
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
     def test_ancient_text(self):
         console.print("\n[bold]Testing Exercise 0: ft_ancient_text[/bold]")
         exercise_label = "Exercise 0"
         status, path = self._load_module("ft_ancient_text", exercise_label)
         if not status: return
 
-        # v3.0: uses sys.argv
-        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'read', 'close', 'print', 'len'], allowed_imports=['sys']):
+        # v3.0: uses sys.argv and may use typing.IO annotations.
+        if not self.verify_strict(
+            path,
+            exercise_label,
+            allowed_funcs=['open', 'read', 'close', 'print', 'len'],
+            allowed_imports=['sys', 'typing'],
+        ):
+            return
+        if not self._enforce_no_with_before_ex3(path, exercise_label):
             return
 
         import subprocess
@@ -200,8 +234,15 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_archive_creation", exercise_label)
         if not status: return
 
-        # v3.0: appending '# ' and saving to user input filename.
-        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'read', 'write', 'close', 'print', 'input', 'len']):
+        # v3.0: append '#' at EOL and save by user-provided filename.
+        if not self.verify_strict(
+            path,
+            exercise_label,
+            allowed_funcs=['open', 'read', 'write', 'close', 'print', 'input', 'len'],
+            allowed_imports=['sys', 'typing'],
+        ):
+            return
+        if not self._enforce_no_with_before_ex3(path, exercise_label):
             return
 
         target_file = "test_output_archive.txt"
@@ -217,21 +258,31 @@ class Tester(BaseTester):
 
             if self.check_for_crash(out, exercise_label): return
 
-            if "=== Cyber Archives Creation ===" not in out:
+            if "=== Cyber Archives Recovery & Preservation ===" not in out:
                  console.print("[red]KO (Missing Header)[/red]")
-                 self.record_error(exercise_label, "Output Error", "Missing '=== Cyber Archives Creation ==='")
+                 self.record_error(
+                    exercise_label,
+                    "Output Error",
+                    "Missing '=== Cyber Archives Recovery & Preservation ==='",
+                )
                  return
 
             if os.path.exists(target_file):
                 with open(target_file, "r") as f:
                     content = f.read()
                 
-                # Check for comment appended lines
-                if "# SECURE ARCHIVE FRAGMENT - 0x892B" in content and "# Knowledge must survive" in content:
-                     console.print("[green]OK (File Created & Commented)[/green]")
+                # Subject requires trailing '#' at end of each line.
+                lines = [ln for ln in content.splitlines() if ln]
+                if lines and all(ln.endswith("#") for ln in lines):
+                    console.print("[green]OK (File Created & Transformed)[/green]")
                 else:
-                     console.print("[red]KO (File Content Missing '#')[/red]")
-                     self.record_error(exercise_label, "Logic Error", f"File created but content is not properly commented with '# '.\nGot:\n{content}")
+                    console.print("[red]KO (File Content Missing trailing '#')[/red]")
+                    self.record_error(
+                        exercise_label,
+                        "Logic Error",
+                        "File created but transformed lines do not all end with '#'.\n"
+                        f"Got:\n{content}",
+                    )
                 
                 os.remove(target_file)
             else:
@@ -247,9 +298,15 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_stream_management", exercise_label)
         if not status: return
 
-        # v3.0: Uses sys.stdin & sys.stderr directly, no input() function authorized
-        if not self.verify_strict(path, exercise_label, allowed_funcs=['print'], allowed_imports=['sys']):
-            # Print is allowed, but maybe they write to stderr purely? We allow print.
+        # v3.0: reuse Ex1 logic, sys.stdin for prompt answer, and sys.stderr for errors.
+        if not self.verify_strict(
+            path,
+            exercise_label,
+            allowed_funcs=['open', 'read', 'readline', 'write', 'flush', 'close', 'print', 'len'],
+            allowed_imports=['sys', 'typing'],
+        ):
+            return
+        if not self._enforce_no_with_before_ex3(path, exercise_label):
             return
 
         # Explicitly check for NO input() function
@@ -266,30 +323,44 @@ class Tester(BaseTester):
             pass
 
         import subprocess
-        input_str = "normal_log_1\nnormal_log_2\nERROR: critical failure\nnormal_log_3\nCRITICAL: meltdown\n"
+        input_str = "/etc/passwd\n"
         try:
-            cmd = [sys.executable, path]
+            cmd = [sys.executable, path, "ancient_fragment.txt"]
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             stdout, stderr = proc.communicate(input=input_str)
             
             if self.check_for_crash(stdout + stderr, exercise_label): return
 
-            if "=== Cyber Stream Manager ===" not in stdout:
+            if "=== Cyber Archives Recovery & Preservation ===" not in stdout:
                  console.print("[red]KO (Missing Header)[/red]")
+                 self.record_error(
+                    exercise_label,
+                    "Output Error",
+                    "Missing '=== Cyber Archives Recovery & Preservation ==='",
+                )
                  return
 
-            # Stdout should process lines
-            if "normal_log_1" in stdout and "normal_log_2" in stdout:
-                 console.print("[green]OK (Stdout Processing)[/green]")
+            if "Digital preservation protocols established 2087" in stdout:
+                 console.print("[green]OK (Read/Transform flow)[/green]")
             else:
-                 console.print("[red]KO (Stdout Processing)[/red]")
+                 console.print("[red]KO (Read/Transform flow)[/red]")
+                 self.record_error(
+                    exercise_label,
+                    "Output Error",
+                    f"Expected recovered content in stdout. Got:\n{stdout}",
+                )
 
-            # Stderr should contain logs prefixed
-            if "[STDERR] ERROR: critical failure" in stderr and "[STDERR] CRITICAL: meltdown" in stderr:
-                 console.print("[green]OK (Stderr Routing)[/green]")
+            # Stderr must contain prefixed exception message for save failure.
+            if "[STDERR]" in stderr and "Error opening file" in stderr:
+                 console.print("[green]OK (Stderr Prefix + Routing)[/green]")
             else:
-                 console.print("[red]KO (Stderr Routing)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Expected '[STDERR] ...' lines in stderr. Got:\n{stderr}")
+                 console.print("[red]KO (Stderr Prefix + Routing)[/red]")
+                 self.record_error(
+                    exercise_label,
+                    "Output Error",
+                    "Expected error lines in sys.stderr with '[STDERR]' prefix.\n"
+                    f"stdout:\n{stdout}\n\nstderr:\n{stderr}",
+                )
 
         except Exception as e:
              console.print(f"[red]KO ({e})[/red]")
@@ -324,17 +395,72 @@ class Tester(BaseTester):
             out = result.stdout + result.stderr
             if self.check_for_crash(out, exercise_label): return
 
-            if "=== Vault Security ===" not in out:
+            if "=== Cyber Archives Security ===" not in out:
                  console.print("[red]KO (Header)[/red]")
-                 self.record_error(exercise_label, "Output Error", "Missing '=== Vault Security ==='")
+                 self.record_error(
+                    exercise_label,
+                    "Output Error",
+                    "Missing '=== Cyber Archives Security ==='",
+                )
                  return
 
-            # Check if testing secure_archive function returns tuple
-            if "Success: True" in out or "Success: False" in out or "Tuple return" in out or "True" in out:
-                 console.print("[green]OK (Logic)[/green]")
-            else:
-                 console.print("[red]KO (Logic)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Cannot verify secure_archive tuple return functionality from output. Got:\n{out}")
+            module = self._load_module_object(path)
+            fn = getattr(module, "secure_archive", None) if module else None
+            if fn is None:
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "Missing required function: secure_archive(...)",
+                )
+                return
+
+            read_ok = fn("ancient_fragment.txt")
+            if not isinstance(read_ok, tuple) or len(read_ok) != 2:
+                self.record_error(
+                    exercise_label,
+                    "Logic Error",
+                    "secure_archive() must return a tuple(bool, str).",
+                )
+                return
+            if not isinstance(read_ok[0], bool) or not isinstance(read_ok[1], str):
+                self.record_error(
+                    exercise_label,
+                    "Logic Error",
+                    "secure_archive() tuple must be (bool, str).",
+                )
+                return
+
+            miss = fn("/not/existing/file")
+            if not isinstance(miss, tuple) or len(miss) != 2 or miss[0] is not False:
+                self.record_error(
+                    exercise_label,
+                    "Logic Error",
+                    "Reading a nonexistent file should return (False, <error message>).",
+                )
+                return
+
+            write_path = "vault_security_test_output.txt"
+            try:
+                write_ok = fn(write_path, "write", "vault payload")
+                if not isinstance(write_ok, tuple) or len(write_ok) != 2 or write_ok[0] is not True:
+                    self.record_error(
+                        exercise_label,
+                        "Logic Error",
+                        "Writing via secure_archive should return (True, <message>).",
+                    )
+                    return
+                if not os.path.exists(write_path):
+                    self.record_error(
+                        exercise_label,
+                        "Logic Error",
+                        "Write operation returned success but output file was not created.",
+                    )
+                    return
+            finally:
+                if os.path.exists(write_path):
+                    os.remove(write_path)
+
+            console.print("[green]OK (secure_archive contract)[/green]")
 
         except Exception as e:
              console.print(f"[red]KO ({e})[/red]")

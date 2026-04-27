@@ -8,6 +8,8 @@ import os
 import ast
 import traceback
 import subprocess
+import builtins
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
@@ -46,14 +48,13 @@ class Tester(BaseTester):
         return cwd
 
     def common_strict_check(self, path, label, extra_imports=None):
+        # Subject v3.0: all builtins authorized except eval/exec.
         allowed_funcs = [
-            "print", "len", "sum", "max", "min", "range", "zip", "enumerate", 
-            "int", "float", "str", "bool", "list", "dict", "set", "tuple",
-            "isinstance", "issubclass", "super", "next", "iter", "all", "any", "id",
-            "getattr", "hasattr", "setattr", "type"
+            n for n in dir(builtins)
+            if not n.startswith("_") and n not in {"eval", "exec"}
         ]
-        
-        allowed_imports = ["sys", "os", "typing", "abc", "random", "datetime"]
+
+        allowed_imports = ["typing", "abc"]
         if extra_imports:
              allowed_imports.extend(extra_imports)
 
@@ -69,12 +70,83 @@ class Tester(BaseTester):
              self.record_error(label, "Style Error (Missing Type Hints)", type_errors)
              return False
 
-        return self.verify_strict(path, label, allowed_funcs, allowed_imports, enforce_try_except=False)
+        if not self.verify_strict(
+            path, label, allowed_funcs, allowed_imports, enforce_try_except=False
+        ):
+            return False
+        return self._check_no_external_imports(path, label)
+
+    def _allowed_import_roots(self, root_dir):
+        roots = {"abc", "typing", "__future__"}
+        cwd = Path(root_dir)
+        for py in cwd.rglob("*.py"):
+            rel = py.relative_to(cwd)
+            if rel.name == "__init__.py":
+                parts = rel.parts[:-1]
+            else:
+                parts = rel.parts
+            if not parts:
+                continue
+            if len(parts) == 1:
+                roots.add(parts[0].replace(".py", ""))
+            else:
+                roots.add(parts[0])
+        return roots
+
+    def _check_no_external_imports(self, path, label):
+        try:
+            root_dir = self._find_root_dir()
+            allowed_roots = self._allowed_import_roots(root_dir)
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            bad = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        root = alias.name.split(".")[0]
+                        if root not in allowed_roots:
+                            bad.append(alias.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level > 0:
+                        continue
+                    if node.module:
+                        root = node.module.split(".")[0]
+                        if root not in allowed_roots:
+                            bad.append(node.module)
+            if bad:
+                self.record_error(
+                    label,
+                    "Forbidden Import",
+                    "External libraries are forbidden in Module 07.\n"
+                    f"Forbidden imports: {sorted(set(bad))}",
+                )
+                return False
+            return True
+        except Exception as e:
+            self.record_error(label, "AST Error", f"Import scan failed: {e}")
+            return False
+
+    def _check_mandatory_package_inits(self, root_dir):
+        missing = []
+        for ex_name in ("ex0", "ex1", "ex2"):
+            init_path = os.path.join(root_dir, ex_name, "__init__.py")
+            if not os.path.exists(init_path):
+                missing.append(f"{ex_name}/__init__.py")
+        if missing:
+            self.record_error(
+                "Project Structure",
+                "Missing Package Files",
+                "__init__.py is mandatory for each exercise folder.\nMissing:\n- "
+                + "\n- ".join(missing),
+            )
+            return False
+        return True
 
     def _check_ex_directory(self, root_dir, ex_name, label):
         ex_dir = os.path.join(root_dir, ex_name)
         if not os.path.exists(ex_dir):
-            return True # Not strictly enforcing existence if main file exists, but good to check
+            self.record_error(label, "Missing Directory", f"Missing required directory: {ex_name}/")
+            return False
         for fname in os.listdir(ex_dir):
             if fname.endswith(".py"):
                 path = os.path.join(ex_dir, fname)
@@ -204,10 +276,12 @@ class Tester(BaseTester):
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
 
+        root_dir = self._find_root_dir()
         # The PDF instructions for Mod07 v3.0 say testing code is at root.
-        root_init = os.path.join(self._find_root_dir(), "__init__.py")
+        root_init = os.path.join(root_dir, "__init__.py")
         if not os.path.exists(root_init):
              console.print("[yellow]Warning: Missing __init__.py at repository root. This may cause import issues.[/yellow]")
+        self._check_mandatory_package_inits(root_dir)
 
         if exercise_name:
             found = False

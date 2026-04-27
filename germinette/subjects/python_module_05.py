@@ -1,6 +1,7 @@
 import sys
 import os
 import ast
+import builtins
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
@@ -108,25 +109,8 @@ class Tester(BaseTester):
 
     # --- Exercise Tests ---
 
-    def check_polymorphism_requirements(self, path, exercise_label):
-        """Checks for mandatory usage of super()."""
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                tree = ast.parse(f.read())
-            
-            has_super = False
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'super':
-                    has_super = True
-                    break
-            if not has_super:
-                console.print("[red]KO (Missing super())[/red]")
-                self.record_error(exercise_label, "Structure Error", "Must use 'super()' to initialize parent classes or call parent methods.")
-                return False
-            return True
-        except Exception as e:
-            console.print(f"[red]KO (AST Error: {e})[/red]")
-            return False
+    def _all_builtin_functions(self):
+        return [n for n in dir(builtins) if not n.startswith("_")]
 
     def test_data_processor(self):
         console.print("\n[bold]Testing Exercise 0: data_processor[/bold]")
@@ -134,15 +118,15 @@ class Tester(BaseTester):
         status, path = self._load_module("data_processor", exercise_label)
         if not status: return
 
-        # v3.0 check architecture (ABC module required)
-        allowed_builtins = ["print", "len", "float", "int", "str", "isinstance", "issubclass", "all", "any", "zip", "sum", "list", "dict", "tuple"]
-        
-        if not self.verify_strict(path, exercise_label, 
-                                  allowed_builtins, 
-                                  allowed_imports=["sys", "abc", "typing"], 
-                                  enforce_try_except=True): return
-
-        if not self.check_polymorphism_requirements(path, exercise_label): return
+        # v3.0 general rules: imports restricted to abc + typing, all builtins authorized.
+        if not self.verify_strict(
+            path,
+            exercise_label,
+            self._all_builtin_functions(),
+            allowed_imports=["abc", "typing"],
+            enforce_try_except=False,
+        ):
+            return
 
         import subprocess
         try:
@@ -160,14 +144,26 @@ class Tester(BaseTester):
                  console.print("[red]KO (Missing Classes)[/red]")
                  self.record_error(exercise_label, "Structure Error", f"Missing required classes. Found: {classes}")
                  return
+            methods = {
+                node.name: {f.name for f in node.body if isinstance(f, ast.FunctionDef)}
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ClassDef)
+            }
+            expected_dp = {"validate", "ingest", "output"}
+            if not expected_dp.issubset(methods.get("DataProcessor", set())):
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "DataProcessor must define validate(), ingest(), and output().",
+                )
+                return
             
-            # v3.0 check output
+            # v3.0 output is customizable; enforce presence of core demo parts.
             required = [
-                "Testing Numeric Processor",
-                "Processed: 3 items",
-                "Testing Text Processor",
-                "Testing Log Processor",
-                "Testing Error Handling"
+                "Code Nexus",
+                "Numeric Processor",
+                "Text Processor",
+                "Log Processor",
             ]
             
             missing = [r for r in required if r not in out]
@@ -186,13 +182,14 @@ class Tester(BaseTester):
         status, path = self._load_module("data_stream", exercise_label)
         if not status: return
 
-        # v3.0
-        allowed_builtins = ["next", "iter", "range", "len", "print", "float", "int", "str", "isinstance", "issubclass", "tuple", "list", "dict"]
-        
-        if not self.verify_strict(path, exercise_label, 
-                                  allowed_builtins, 
-                                  allowed_imports=["sys", "abc", "typing"], 
-                                  enforce_try_except=True): return
+        if not self.verify_strict(
+            path,
+            exercise_label,
+            self._all_builtin_functions(),
+            allowed_imports=["abc", "typing"],
+            enforce_try_except=False,
+        ):
+            return
 
         import subprocess
         try:
@@ -208,15 +205,28 @@ class Tester(BaseTester):
                  console.print("[red]KO (Missing DataStream Class)[/red]")
                  self.record_error(exercise_label, "Structure Error", "DataStream class is missing.")
                  return
+            methods = {
+                node.name: {f.name for f in node.body if isinstance(f, ast.FunctionDef)}
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ClassDef)
+            }
+            required_methods = {
+                "register_processor",
+                "process_stream",
+                "print_processors_stats",
+            }
+            if not required_methods.issubset(methods.get("DataStream", set())):
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "DataStream must implement register_processor, process_stream, "
+                    "and print_processors_stats.",
+                )
+                return
 
             required = [
-                "=== Streaming Data Demo ===",
-                "Registering processors",
-                "Processing stream",
-                "Stream Results",
-                "Total numeric items",
-                "Total textual items",
-                "Total log items"
+                "Code Nexus - Data Stream",
+                "DataStream statistics",
             ]
 
             missing = [r for r in required if r not in out]
@@ -235,22 +245,50 @@ class Tester(BaseTester):
         status, path = self._load_module("data_pipeline", exercise_label)
         if not status: return
 
-        # v3.0: export plugin protocols
-        allowed_builtins = ["print", "len", "range", "float", "int", "str", "isinstance", "issubclass", "list", "dict", "tuple"]
-        
-        if not self.verify_strict(path, exercise_label, 
-                                  allowed_builtins, 
-                                  allowed_imports=["sys", "json", "csv", "io", "abc", "typing", "collections"], 
-                                  enforce_try_except=False): return
+        if not self.verify_strict(
+            path,
+            exercise_label,
+            self._all_builtin_functions(),
+            allowed_imports=["abc", "typing"],
+            enforce_try_except=False,
+        ):
+            return
 
         try:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
+                tree = ast.parse(content)
             if "Protocol" not in content:
-                 console.print("[red]KO (Missing Protocol)[/red]")
-                 self.record_error(exercise_label, "Structure Error", "You must use typing.Protocol for ExportPlugin.")
-                 return
-        except: pass
+                console.print("[red]KO (Missing Protocol)[/red]")
+                self.record_error(exercise_label, "Structure Error", "You must use typing.Protocol for ExportPlugin.")
+                return
+            classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+            if "DataStream" not in classes:
+                self.record_error(exercise_label, "Structure Error", "Missing DataStream class.")
+                return
+            has_csv = any("CSV" in name.upper() for name in classes)
+            has_json = any("JSON" in name.upper() for name in classes)
+            if not has_csv or not has_json:
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "Expected at least one CSV plugin class and one JSON plugin class.",
+                )
+                return
+            methods = {
+                node.name: {f.name for f in node.body if isinstance(f, ast.FunctionDef)}
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ClassDef)
+            }
+            if "output_pipeline" not in methods.get("DataStream", set()):
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "DataStream must implement output_pipeline(nb, plugin).",
+                )
+                return
+        except Exception:
+            pass
 
         import subprocess
         try:
@@ -259,16 +297,15 @@ class Tester(BaseTester):
             out = result.stdout + result.stderr
             if self.check_for_crash(out, exercise_label): return
 
-            if "=== Protocol & Pipeline Demo ===" not in out:
+            if "Code Nexus - Data Pipeline" not in out:
                 console.print("[red]KO (Missing Header)[/red]")
-                self.record_error(exercise_label, "Output Error", "Missing header '=== Protocol & Pipeline Demo ==='")
+                self.record_error(exercise_label, "Output Error", "Missing header '=== Code Nexus - Data Pipeline ==='")
                 return
 
             required = [
-                "Exporting to CSV",
-                "Exporting to JSON",
-                "csv_output",
-                "json_output"
+                "CSV",
+                "JSON",
+                "DataStream statistics",
             ]
 
             missing = [r for r in required if r not in out]

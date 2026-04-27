@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.8.5] - 2026-04-27
+### Fixed
+- **Module 05 v3.0 checker alignment**: Updated `python_module_05` strict checks to match Code Nexus v3.0 general rules (imports restricted to `abc`/`typing`, all builtins authorized) and removed the non-subject `super()` mandate that caused false negatives.
+- **Module 05 structure validation refresh**: Added targeted AST checks for required architecture elements: Ex0 class/method contracts (`DataProcessor` + `validate`/`ingest`/`output`), Ex1 `DataStream` required methods (`register_processor`, `process_stream`, `print_processors_stats`), and Ex2 `ExportPlugin` protocol flow plus `output_pipeline` and CSV/JSON plugin presence.
+- **Module 05 runtime expectation cleanup**: Replaced legacy hardcoded output markers with v3.0-oriented markers that preserve flexibility allowed by the subject examples while still validating mandatory pipeline demonstration sections.
+- **Root regression coverage for Module 05 checker**: Added `tests/test_module05_v30_alignment.py` to lock these v3.0 expectations and reduce future checker drift.
+- **Module 06 v2.0 checker hardening**: Strengthened The Codex checks by enforcing project-local import rules (rejecting out-of-project imports), preserving forbidden `eval()` / `exec()` and `sys.path` protections, and adding mandatory laboratory tree validation against the expected module/package layout.
+- **Root regression coverage for Module 06 checker**: Added `tests/test_module06_v20_alignment.py` to lock import-scope and required-structure behavior, reducing future drift in Module 06 validation.
+- **Module 07 v3.0 checker hardening**: Tightened DataDeck checks to enforce module-local import policy (external libraries forbidden), align builtin authorization with subject rules (`eval`/`exec` excluded), and require mandatory `__init__.py` package files in `ex0/`, `ex1/`, and `ex2/`.
+- **Root regression coverage for Module 07 checker**: Added `tests/test_module07_v30_alignment.py` to lock external-import rejection and required package-init enforcement for Module 07.
+
+## [1.8.4] - 2026-04-27
+### Fixed
+- **Module 04 v3.0 checker realignment**: Corrected subject drift in `python_module_04` by enforcing the right Exercise 1 header (`=== Cyber Archives Recovery & Preservation ===`), validating line-end `#` transformation (instead of legacy comment-prefix checks), and replacing the off-subject Exercise 2 stream scenario with v3.0 recovery/preservation flow checks (`sys.stdin` input path + `[STDERR]`-prefixed error routing).
+- **Module 04 structure/contract enforcement**: Added explicit pre-Ex3 guard forbidding `with` usage in Exercises 0-2, aligned allowed imports with `typing`-annotated subject expectations, and strengthened Exercise 3 verification to validate `secure_archive()` behavior as a real `(bool, str)` contract for read/write and error cases.
+- **Root regression coverage for Module 04 checker**: Added `tests/test_module04_v30_alignment.py` to lock these v3.0 expectations and reduce future false positives/false negatives.
+
 ## [1.8.3] - 2026-04-27
 ### Fixed
 - **Module 08 v3.0 checker compliance hardening**: Aligned `python_module_08` checks with subject expectations across all exercises. Ex0 now validates mandatory matrix/venv markers and mode-specific guidance/details; Ex1 now enforces required dependency artifacts (`requirements.txt` + `pyproject.toml`), numpy-driven dataset intent, and explicit pip/Poetry comparison while allowing only import-related style/type noise as permitted by the subject; Ex2 now enforces required `.env.example` keys (`MATRIX_MODE`, `DATABASE_URL`, `API_KEY`, `LOG_LEVEL`, `ZION_ENDPOINT`) plus visible dev/prod output differences through environment-driven runs.
