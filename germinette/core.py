@@ -133,8 +133,9 @@ class ModuleDetector:
             "dirs": ["alchemy"]
         },
         "python_module_07": {
-            "files": ["ex0/Card.py", "ex1/Deck.py", "ex2/EliteCard.py", "ex3/GameEngine.py", "ex4/TournamentPlatform.py"],
-            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
+            # DataDeck v3.0
+            "files": ["battle.py", "capacitor.py", "tournament.py", "ex0/__init__.py", "ex1/__init__.py", "ex2/__init__.py"],
+            "dirs": ["ex0", "ex1", "ex2"]
         },
         "python_module_08": {
             "files": ["ex0/construct.py", "ex1/loading.py", "ex2/oracle.py"],

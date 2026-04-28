@@ -10,6 +10,7 @@
 - **Root regression coverage for Module 06 checker**: Added `tests/test_module06_v20_alignment.py` to lock import-scope and required-structure behavior, reducing future drift in Module 06 validation.
 - **Module 07 v3.0 checker hardening**: Tightened DataDeck checks to enforce module-local import policy (external libraries forbidden), align builtin authorization with subject rules (`eval`/`exec` excluded), and require mandatory `__init__.py` package files in `ex0/`, `ex1/`, and `ex2/`.
 - **Root regression coverage for Module 07 checker**: Added `tests/test_module07_v30_alignment.py` to lock external-import rejection and required package-init enforcement for Module 07.
+- **Module 07 auto-detection fix**: Updated `ModuleDetector` signatures for DataDeck v3.0 so standard layouts (`battle.py`, `capacitor.py`, `tournament.py` + `ex0/`/`ex1/`/`ex2/`) are correctly auto-detected when running `germinette` from module folders.
 
 ## [1.8.4] - 2026-04-27
 ### Fixed
