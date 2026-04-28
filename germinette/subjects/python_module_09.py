@@ -6,6 +6,7 @@ import sys
 import os
 import importlib.util
 import traceback
+import ast
 from datetime import datetime, date
 
 console = Console()
@@ -21,6 +22,11 @@ class Tester(BaseTester):
             ("ex2", self.test_space_crew),
         ]
         self.grouped_errors = {}
+        self.required_ex_files = {
+            "ex0": "space_station.py",
+            "ex1": "alien_contact.py",
+            "ex2": "space_crew.py",
+        }
 
     def record_error(self, exercise_label, error_type, message):
         if exercise_label not in self.grouped_errors:
@@ -80,7 +86,7 @@ class Tester(BaseTester):
         # because Pydantic does AST magic or metaclass stuff that might look like violations.
         # But we check user code, not library code.
         
-        allowed_imports_base = ["sys", "os", "typing", "abc", "random", "datetime", "pydantic", "enum", "uuid"]
+        allowed_imports_base = ["typing", "datetime", "pydantic", "enum", "json", "csv"]
         if extra_imports:
              allowed_imports_base.extend(extra_imports)
 
@@ -98,73 +104,194 @@ class Tester(BaseTester):
 
         return self.verify_strict(path, label, allowed_funcs, allowed_imports_base, enforce_try_except=False)
 
+    def _check_project_structure(self):
+        cwd = os.getcwd()
+        base_candidates = [
+            os.path.join(cwd, "python_module_09"),
+            os.path.join(cwd, "devtools", "test", "python_module_09"),
+            cwd,
+        ]
+        base = None
+        for b in base_candidates:
+            if os.path.exists(b):
+                base = b
+                break
+        if base is None:
+            return
+        missing = []
+        for ex, fname in self.required_ex_files.items():
+            path = os.path.join(base, ex, fname)
+            if not os.path.exists(path):
+                missing.append(f"{ex}/{fname}")
+        if missing:
+            self.record_error(
+                "Project Structure",
+                "Missing Exercise Files",
+                "Module 09 expected files are missing:\n- " + "\n- ".join(missing),
+            )
+
+    def _assert_pydantic_v2_validators(self, path, exercise_label, require_model_validator):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+        except Exception as e:
+            self.record_error(exercise_label, "AST Error", f"Could not parse file: {e}")
+            return False
+
+        has_model_validator = False
+        has_deprecated_validator = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                for deco in node.decorator_list:
+                    deco_name = None
+                    if isinstance(deco, ast.Name):
+                        deco_name = deco.id
+                    elif isinstance(deco, ast.Attribute):
+                        deco_name = deco.attr
+                    elif isinstance(deco, ast.Call):
+                        if isinstance(deco.func, ast.Name):
+                            deco_name = deco.func.id
+                        elif isinstance(deco.func, ast.Attribute):
+                            deco_name = deco.func.attr
+                    if deco_name == "model_validator":
+                        has_model_validator = True
+                    if deco_name == "validator":
+                        has_deprecated_validator = True
+
+        if has_deprecated_validator:
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                "Deprecated @validator detected. Use @model_validator (Pydantic v2).",
+            )
+            return False
+        if require_model_validator and not has_model_validator:
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                "Missing required @model_validator(mode='after') business validation.",
+            )
+            return False
+        return True
+
     def test_space_station(self):
         console.print("\n[bold]Testing Exercise 0: Space Station Data[/bold]")
         exercise_label = "Exercise 0"
         mod, path = self._load_module(0, "space_station.py")
-        
+
         if not path:
-             console.print("[red]KO (Missing File)[/red]")
-             self.record_error(exercise_label, "Missing File", "Could not find space_station.py")
-             return
+            console.print("[red]KO (Missing File)[/red]")
+            self.record_error(
+                exercise_label, "Missing File", "Could not find space_station.py"
+            )
+            return
 
         if not mod:
-             console.print("[red]KO (Import Failed)[/red]")
-             self.record_error(exercise_label, "Import Error", "Failed to import module.")
-             return
-            
-        if not self.common_strict_check(path, exercise_label): return
+            console.print("[red]KO (Import Failed)[/red]")
+            self.record_error(
+                exercise_label, "Import Error", "Failed to import module."
+            )
+            return
+
+        if not self.common_strict_check(path, exercise_label):
+            return
 
         try:
-             SpaceStation = getattr(mod, "SpaceStation", None)
-             if not SpaceStation:
-                 self.record_error(exercise_label, "Structure Error", "One or more classes missing: SpaceStation")
-                 console.print("[red]KO[/red]")
-                 return
+            SpaceStation = getattr(mod, "SpaceStation", None)
+            if not SpaceStation:
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "One or more classes missing: SpaceStation",
+                )
+                console.print("[red]KO[/red]")
+                return
 
-             # Validate Model Structure
-             try:
-                 # Valid Case
-                 start = datetime(2024, 1, 1)
-                 s = SpaceStation(
-                     station_id="ISS001",
-                     name="Test Station",
-                     crew_size=10,
-                     power_level=80.5,
-                     oxygen_level=95.0,
-                     last_maintenance=start,
-                     is_operational=True
-                 )
-             except Exception as e:
-                 self.record_error(exercise_label, "Validation Error", f"Failed to instantiate valid model: {e}")
-                 console.print("[red]KO[/red]")
-                 return
+            # Invalid Case Check
+            errors = []
+            try:
+                # Valid case
+                start = datetime(2024, 1, 1)
+                SpaceStation(
+                    station_id="ISS001",
+                    name="Test Station",
+                    crew_size=10,
+                    power_level=80.5,
+                    oxygen_level=95.0,
+                    last_maintenance=start,
+                    is_operational=True,
+                )
+            except Exception as e:
+                self.record_error(
+                    exercise_label,
+                    "Validation Error",
+                    f"Failed to instantiate valid model: {e}",
+                )
+                console.print("[red]KO[/red]")
+                return
 
-             # Invalid Case Check
-             errors = []
-             try:
-                 SpaceStation(
-                     station_id="ISS001",
-                     name="Test",
-                     crew_size=25, # Invalid (>20)
-                     power_level=101.0, # Invalid
-                     oxygen_level=95.0,
-                     last_maintenance=start
-                 )
-                 errors.append("Model failed to raise error for crew_size > 20")
-             except Exception:
-                 pass # Good
+            try:
+                SpaceStation(
+                    station_id="ISS001",
+                    name="Test",
+                    crew_size=25,  # Invalid (>20)
+                    power_level=101.0,  # Invalid
+                    oxygen_level=95.0,
+                    last_maintenance=start
+                )
+                errors.append("Model failed to raise error for crew_size > 20")
+            except Exception:
+                pass  # Good
 
-             if errors:
-                 self.record_error(exercise_label, "Logic Error", "\n".join(errors))
-                 console.print("[red]KO[/red]")
-                 return
+            # Extra constraints from subject
+            try:
+                SpaceStation(
+                    station_id="AA",  # too short
+                    name="X",
+                    crew_size=2,
+                    power_level=80.0,
+                    oxygen_level=80.0,
+                    last_maintenance=start,
+                )
+                errors.append("Model failed to enforce station_id min length (3)")
+            except Exception:
+                pass
+            try:
+                SpaceStation(
+                    station_id="ISS_VALID",
+                    name="X" * 51,  # too long
+                    crew_size=2,
+                    power_level=80.0,
+                    oxygen_level=80.0,
+                    last_maintenance=start,
+                )
+                errors.append("Model failed to enforce name max length (50)")
+            except Exception:
+                pass
+            try:
+                SpaceStation(
+                    station_id="ISS_VALID",
+                    name="Station",
+                    crew_size=2,
+                    power_level=80.0,
+                    oxygen_level=80.0,
+                    last_maintenance=start,
+                    notes="n" * 201,  # too long
+                )
+                errors.append("Model failed to enforce notes max length (200)")
+            except Exception:
+                pass
 
-             console.print("[green]OK[/green]")
+            if errors:
+                self.record_error(exercise_label, "Logic Error", "\n".join(errors))
+                console.print("[red]KO[/red]")
+                return
+
+            console.print("[green]OK[/green]")
 
         except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
-             self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
+            console.print(f"[red]KO (Execution Error: {e})[/red]")
+            self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def test_alien_contact(self):
         console.print("\n[bold]Testing Exercise 1: Alien Contact Logs[/bold]")
@@ -179,6 +306,10 @@ class Tester(BaseTester):
              return
             
         if not self.common_strict_check(path, exercise_label): return
+        if not self._assert_pydantic_v2_validators(
+            path, exercise_label, require_model_validator=True
+        ):
+            return
 
         try:
              AlienContact = getattr(mod, "AlienContact", None)
@@ -291,6 +422,10 @@ class Tester(BaseTester):
              return
             
         if not self.common_strict_check(path, exercise_label): return
+        if not self._assert_pydantic_v2_validators(
+            path, exercise_label, require_model_validator=True
+        ):
+            return
 
         try:
              CrewMember = getattr(mod, "CrewMember", None)
@@ -401,6 +536,7 @@ class Tester(BaseTester):
         # Ensure imports work for local files
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
+        self._check_project_structure()
 
         if exercise_name:
             found = False

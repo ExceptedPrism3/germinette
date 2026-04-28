@@ -106,6 +106,21 @@ class Tester(BaseTester):
                 "Lint Rule",
                 "Makefile lint target should include both flake8 and mypy.",
             )
+        required_mypy_flags = [
+            "--warn-return-any",
+            "--warn-unused-ignores",
+            "--ignore-missing-imports",
+            "--disallow-untyped-defs",
+            "--check-untyped-defs",
+        ]
+        missing_flags = [flag for flag in required_mypy_flags if flag not in txt]
+        if missing_flags:
+            self.record_error(
+                label,
+                "Lint Rule",
+                "Makefile lint target is missing required mypy flags:\n- "
+                + "\n- ".join(missing_flags),
+            )
         if self._error_count(label) == before:
             console.print("[green]OK[/green]")
         else:
@@ -456,6 +471,14 @@ class Tester(BaseTester):
                     )
                     break
 
+        self._check_42_pattern_requirement(
+            parsed=parsed,
+            width=width,
+            height=height,
+            runtime_output=combined,
+            exercise_label=label,
+        )
+
         moves = {"N": (0, -1, 0), "E": (1, 0, 1), "S": (0, 1, 2), "W": (-1, 0, 3)}
 
         def neighbors(x, y):
@@ -541,6 +564,36 @@ class Tester(BaseTester):
             console.print("[red]KO[/red]")
 
         self.test_seed_regeneration_behavior(main_path, cfg_path)
+
+    def _check_42_pattern_requirement(
+        self,
+        *,
+        parsed,
+        width,
+        height,
+        runtime_output,
+        exercise_label,
+    ):
+        # Subject v2.1: a visible "42" should be drawn using fully closed cells.
+        # If maze size is too small, omission is allowed but should be reported.
+        closed_cells = sum(1 for row in parsed for cell in row if cell == 0xF)
+        too_small = width < 5 or height < 5
+
+        if too_small:
+            if closed_cells == 0 and not re.search(r"too small|42", runtime_output, re.IGNORECASE):
+                self.record_error(
+                    exercise_label,
+                    "Maze Validity",
+                    'Maze is too small to draw "42", but no explanatory message was printed.',
+                )
+            return
+
+        if closed_cells < 6:
+            self.record_error(
+                exercise_label,
+                "Maze Validity",
+                'Maze should contain a visible "42" made of several fully closed cells (0xF).',
+            )
 
     def _extract_active_seed(self, cfg_text):
         for raw in cfg_text.splitlines():

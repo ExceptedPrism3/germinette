@@ -7,6 +7,8 @@ import os
 import importlib.util
 import ast
 import traceback
+import sysconfig
+from pathlib import Path
 
 console = Console()
 
@@ -91,7 +93,7 @@ class Tester(BaseTester):
         ]
         
         # Credit to @mauricelorenz (GitHub Issue #7) for pointing out the missing 'time' import for Ex4!
-        allowed_imports_base = ["sys", "os", "typing", "abc", "random", "datetime", 
+        allowed_imports_base = ["typing", "collections", "itertools", "datetime",
                                 "functools", "operator", "itertools", "math", "collections", "time"]
         if extra_imports:
              allowed_imports_base.extend(extra_imports)
@@ -108,7 +110,108 @@ class Tester(BaseTester):
              self.record_error(label, "Style Error (Missing Type Hints)", type_errors)
              return False
 
-        return self.verify_strict(path, label, allowed_funcs, allowed_imports_base, enforce_try_except=False)
+        if not self.verify_strict(
+            path, label, allowed_funcs, allowed_imports_base, enforce_try_except=False
+        ):
+            return False
+        if not self._check_forbidden_eval_exec(path, label):
+            return False
+        if not self._check_no_module_globals(path, label):
+            return False
+        if not self._check_no_external_imports(path, label):
+            return False
+        return True
+
+    def _check_forbidden_eval_exec(self, path, label):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    if node.func.id in {"eval", "exec"}:
+                        self.record_error(
+                            label,
+                            "Forbidden Function",
+                            f"Using {node.func.id}() is forbidden in Module 10.",
+                        )
+                        return False
+            return True
+        except Exception as e:
+            self.record_error(label, "AST Error", f"Failed forbidden-call check: {e}")
+            return False
+
+    def _check_no_module_globals(self, path, label):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            for node in tree.body:
+                if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                    targets = []
+                    if isinstance(node, ast.Assign):
+                        targets = node.targets
+                    elif isinstance(node, ast.AnnAssign):
+                        targets = [node.target]
+                    for t in targets:
+                        if isinstance(t, ast.Name):
+                            name = t.id
+                            # Allow conventional constants / dunder-only module metadata.
+                            if name.isupper() or (name.startswith("__") and name.endswith("__")):
+                                continue
+                            self.record_error(
+                                label,
+                                "Global State",
+                                f"Module-level variable '{name}' detected. "
+                                "Global variables are forbidden in Module 10.",
+                            )
+                            return False
+            return True
+        except Exception as e:
+            self.record_error(label, "AST Error", f"Failed global-variable check: {e}")
+            return False
+
+    def _allowed_import_roots(self, path):
+        roots = {
+            "typing", "collections", "collections.abc", "itertools",
+            "datetime", "functools", "operator", "math", "time",
+            "__future__",
+        }
+        stdlib = set(getattr(sys, "stdlib_module_names", set()))
+        roots.update(stdlib)
+        # allow local module imports if user split helpers in same ex dir
+        roots.update({Path(path).stem})
+        return roots
+
+    def _check_no_external_imports(self, path, label):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            allowed_roots = self._allowed_import_roots(path)
+            bad = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        root = alias.name.split(".")[0]
+                        if root not in allowed_roots:
+                            bad.append(alias.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level > 0:
+                        continue
+                    if node.module:
+                        root = node.module.split(".")[0]
+                        if root not in allowed_roots:
+                            bad.append(node.module)
+            if bad:
+                self.record_error(
+                    label,
+                    "Forbidden Import",
+                    "External libraries are forbidden in Module 10.\n"
+                    f"Forbidden imports: {sorted(set(bad))}",
+                )
+                return False
+            return True
+        except Exception as e:
+            self.record_error(label, "AST Error", f"Failed import-scope check: {e}")
+            return False
 
     def check_lambda_usage(self, path, required_count=1):
         """Checks if lambda is used in the file."""
@@ -144,7 +247,14 @@ class Tester(BaseTester):
         # Check Lambda Usage
         l_count = self.check_lambda_usage(path)
         if l_count < 3:
-             console.print("[yellow]Warning: Few lambda expressions detected. Ensure you are using lambdas![/yellow]")
+             console.print("[red]KO (Lambda Usage)[/red]")
+             self.record_error(
+                exercise_label,
+                "Structure Error",
+                "Exercise 0 requires lambda expressions for transformations; "
+                f"detected only {l_count} lambda nodes.",
+            )
+             return
 
         try:
             # 1. Artifact Sorter
@@ -213,11 +323,11 @@ class Tester(BaseTester):
         try:
             # 1. Spell Combiner
             if hasattr(mod, 'spell_combiner'):
-                f1 = lambda x: x * 2
-                f2 = lambda x: x + 10
+                f1 = lambda target, power: f"{target}:{power * 2}"
+                f2 = lambda target, power: f"{target}:{power + 10}"
                 combined = mod.spell_combiner(f1, f2)
-                res = combined(5) # (10, 15)
-                if res == (10, 15):
+                res = combined("Dragon", 5)
+                if res == ("Dragon:10", "Dragon:15"):
                     console.print("[green]OK (Combiner)[/green]")
                 else:
                     self.record_error(exercise_label, "Logic Error", f"Combiner failed. Got {res}")
@@ -225,9 +335,9 @@ class Tester(BaseTester):
 
             # 2. Power Amplifier
             if hasattr(mod, 'power_amplifier'):
-                base = lambda x: 10
+                base = lambda target, power: f"{target}:{power}"
                 amp = mod.power_amplifier(base, 3)
-                if amp(None) == 30:
+                if amp("Dragon", 10) == "Dragon:30":
                      console.print("[green]OK (Amplifier)[/green]")
                 else:
                      self.record_error(exercise_label, "Logic Error", "Amplifier failed")
@@ -235,14 +345,14 @@ class Tester(BaseTester):
 
             # 3. Conditional Caster
             if hasattr(mod, 'conditional_caster'):
-                cond_true = lambda x: True
-                cond_false = lambda x: False
-                spell = lambda x: "Casted"
+                cond_true = lambda target, power: True
+                cond_false = lambda target, power: False
+                spell = lambda target, power: f"Casted:{target}:{power}"
                 
                 c1 = mod.conditional_caster(cond_true, spell)
                 c2 = mod.conditional_caster(cond_false, spell)
                 
-                if c1(1) == "Casted" and c2(1) == "Spell fizzled":
+                if c1("Dragon", 10) == "Casted:Dragon:10" and c2("Dragon", 10) == "Spell fizzled":
                      console.print("[green]OK (Conditional)[/green]")
                 else:
                      self.record_error(exercise_label, "Logic Error", "Conditional failed")
@@ -250,11 +360,11 @@ class Tester(BaseTester):
 
             # 4. Spell Sequence
             if hasattr(mod, 'spell_sequence'):
-                s1 = lambda x: x + "A"
-                s2 = lambda x: x + "B"
+                s1 = lambda target, power: f"{target}-A-{power}"
+                s2 = lambda target, power: f"{target}-B-{power}"
                 seq = mod.spell_sequence([s1, s2])
-                res = seq("Start") # ["StartA", "StartB"]
-                if res == ["StartA", "StartB"]:
+                res = seq("Start", 5)
+                if res == ["Start-A-5", "Start-B-5"]:
                      console.print("[green]OK (Sequence)[/green]")
                 else:
                      self.record_error(exercise_label, "Logic Error", f"Sequence failed: {res}")

@@ -1,11 +1,24 @@
 # Changelog
 
+## [1.8.7] - 2026-04-28
+### Fixed
+- **A-Maze-ing v2.1 lint-rule parity**: Hardened `a_maze_ing` Makefile validation so the mandatory `lint` recipe now enforces the required mypy flags from the subject (`--warn-return-any`, `--warn-unused-ignores`, `--ignore-missing-imports`, `--disallow-untyped-defs`, `--check-untyped-defs`) instead of only checking for generic `mypy` presence.
+- **A-Maze-ing v2.1 “42” pattern enforcement**: Added explicit output-grid validation for the required visible `"42"` built from fully closed cells (`0xF`), while preserving subject-compliant small-maze behavior by requiring an explanatory runtime message when the pattern is omitted due to size constraints.
+- **Root regression coverage for A-Maze-ing checker alignment**: Added `tests/test_a_maze_ing_checker_alignment.py` to lock Makefile lint-flag enforcement and `"42"` requirement behavior (including small-maze exemption messaging) against future regressions.
+
 ## [1.8.6] - 2026-04-28
 ### Fixed
 - **Module 07 auto-detection reliability**: Updated `ModuleDetector` DataDeck signatures to match v3.0 layouts (`battle.py`, `capacitor.py`, `tournament.py` plus `ex0/`, `ex1/`, `ex2/` package markers), so `germinette` now auto-detects Module 07 correctly from standard project folders.
 - **Module 08 builtin `types` allowance**: Adjusted Matrix checker import policy to accept the stdlib `types` module in Ex0/Ex1/Ex2 strict checks when students use it.
 - **Module 06 v2.0 parity completion**: Added two missing codex rules in checker logic: (1) preserve the intentional pedagogical mypy exception path for `ft_alembic_4.py`, and (2) require `alchemy/transmutation/recipes.py` to include at least one absolute import and one relative import, as demanded by Part III.
 - **Module 06 regression expansion**: Extended `tests/test_module06_v20_alignment.py` with coverage for the Alembic 4 mypy-exception allowance and transmutation import-style enforcement.
+- **Module 09 v3.0 checker hardening**: Tightened Cosmic Data validation by enforcing required `ex0`/`ex1`/`ex2` file presence, strengthening field-constraint checks in Ex0, and adding Pydantic v2 validation expectations (reject deprecated `@validator`, require `@model_validator` for business-rule exercises).
+- **Root regression coverage for Module 09 checker**: Added `tests/test_module09_v30_alignment.py` to lock project-structure checks and Pydantic validator-policy behavior.
+- **Module 10 v3.0 checker hardening**: Strengthened FuncMage validation by adding explicit forbidden checks for `eval()`/`exec()`, module-level global variable detection, stricter external-import rejection, stricter lambda enforcement for Exercise 0, and tighter Exercise 1 behavior checks using the documented `(target, power)` higher-order contracts.
+- **Root regression coverage for Module 10 checker**: Added `tests/test_module10_v30_alignment.py` to lock forbidden-function/global-state behavior and higher-order signature flow checks.
+- **Module 00 v3.0 checker hardening**: Added AST-level structure enforcement for Growing Code submissions, including no top-level executable statements, no `if __name__ == "__main__":` blocks, and “only requested function per file” checks, with a dedicated recursive helper allowance for Ex6 recursive implementation.
+- **Root regression coverage for Module 00 checker**: Added `tests/test_module00_v30_alignment.py` to lock `__main__`-block rejection and Ex6 recursive helper acceptance behavior.
+- **Root regression coverage for Module 01 checker**: Added `tests/test_module01_v30_alignment.py` to lock key Module 01 expectations (Ex0 main-guard requirement and Ex1 `Plant.show()` requirement) against future checker drift.
 
 ## [1.8.5] - 2026-04-27
 ### Fixed

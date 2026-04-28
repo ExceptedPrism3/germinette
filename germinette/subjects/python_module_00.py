@@ -6,6 +6,7 @@ import importlib.util
 import inspect
 import sys
 import os
+import ast
 import traceback
 
 console = Console()
@@ -23,6 +24,17 @@ class Tester(BaseTester):
             ("ft_seed_inventory", self.test_seed_inventory),
         ]
         self.grouped_errors = {}
+        self.authorized_imports = {
+            "ft_hello_garden": set(),
+            "ft_garden_name": set(),
+            "ft_plot_area": set(),
+            "ft_harvest_total": set(),
+            "ft_plant_age": set(),
+            "ft_water_reminder": set(),
+            "ft_count_harvest_iterative": set(),
+            "ft_count_harvest_recursive": set(),
+            "ft_seed_inventory": set(),
+        }
 
     def record_error(self, exercise_label, error_type, message):
         """Records an error grouped by exercise label."""
@@ -134,6 +146,9 @@ class Tester(BaseTester):
 
         try:
             console.print(f"[dim]Debug: Loading {found_path} as {module_name}[/dim]")
+            if not self._check_module_structure(found_path, module_name, exercise_label):
+                return None
+
             spec = importlib.util.spec_from_file_location(module_name, found_path)
             if spec is None:
                 console.print("[red]Spec is None![/red]")
@@ -168,6 +183,96 @@ class Tester(BaseTester):
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Error Loading Module", str(e))
              return None
+
+    def _check_module_structure(self, path, expected_function, exercise_label):
+        """Enforce Module 00 pedagogical constraints:
+        - no top-level executable code
+        - no __main__ block
+        - only expected function (plus optional helper for recursive ex6)
+        - no imports (none are required in subject)
+        """
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+        except Exception as e:
+            self.record_error(exercise_label, "AST Error", f"Unable to parse file: {e}")
+            return False
+
+        is_recursive_ex6 = expected_function == "ft_count_harvest_recursive"
+        allowed_func_names = {expected_function}
+        if is_recursive_ex6:
+            # Subject explicitly allows helper functions for recursion exercise.
+            allowed_func_names.add("_helper")
+            allowed_func_names.add("helper")
+
+        for node in tree.body:
+            if isinstance(node, ast.If):
+                # Forbid `if __name__ == "__main__":`
+                if (
+                    isinstance(node.test, ast.Compare)
+                    and isinstance(node.test.left, ast.Name)
+                    and node.test.left.id == "__name__"
+                ):
+                    self.record_error(
+                        exercise_label,
+                        "Structure Error",
+                        "Do not include a __main__ block; submit only functions.",
+                    )
+                    return False
+            elif isinstance(node, ast.Import):
+                imported = {alias.name.split(".")[0] for alias in node.names}
+                allowed = self.authorized_imports.get(expected_function, set())
+                if not imported.issubset(allowed):
+                    self.record_error(
+                        exercise_label,
+                        "Forbidden Import",
+                        f"Imports are not authorized for {expected_function}. Found: {sorted(imported)}",
+                    )
+                    return False
+            elif isinstance(node, ast.ImportFrom):
+                mod = (node.module or "").split(".")[0]
+                allowed = self.authorized_imports.get(expected_function, set())
+                if mod not in allowed:
+                    self.record_error(
+                        exercise_label,
+                        "Forbidden Import",
+                        f"Imports are not authorized for {expected_function}. Found from: {mod or '<relative>'}",
+                    )
+                    return False
+            elif isinstance(node, ast.FunctionDef):
+                if node.name not in allowed_func_names:
+                    if not (is_recursive_ex6 and node.name.startswith("_")):
+                        self.record_error(
+                            exercise_label,
+                            "Structure Error",
+                            f"Unexpected function '{node.name}'. File should contain only '{expected_function}'.",
+                        )
+                        return False
+            elif isinstance(node, ast.Expr):
+                # Allow module docstring only.
+                if not isinstance(node.value, ast.Constant) or not isinstance(node.value.value, str):
+                    self.record_error(
+                        exercise_label,
+                        "Structure Error",
+                        "Top-level executable code is not allowed; submit function definitions only.",
+                    )
+                    return False
+            elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.For, ast.While, ast.With, ast.Try, ast.ClassDef)):
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "Top-level statements are not allowed; submit function definitions only.",
+                )
+                return False
+
+        if expected_function not in {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}:
+            self.record_error(
+                exercise_label,
+                "Function Missing",
+                f"Could not find required function '{expected_function}'.",
+            )
+            return False
+        return True
 
     def test_hello_garden(self):
         console.print("\n[bold]Testing Exercise 0: ft_hello_garden[/bold]")
