@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.6] - 2026-04-28
+### Fixed
+- **Module 07 auto-detection reliability**: Updated `ModuleDetector` DataDeck signatures to match v3.0 layouts (`battle.py`, `capacitor.py`, `tournament.py` plus `ex0/`, `ex1/`, `ex2/` package markers), so `germinette` now auto-detects Module 07 correctly from standard project folders.
+- **Module 08 builtin `types` allowance**: Adjusted Matrix checker import policy to accept the stdlib `types` module in Ex0/Ex1/Ex2 strict checks when students use it.
+
 ## [1.8.5] - 2026-04-27
 ### Fixed
 - **Module 05 v3.0 checker alignment**: Updated `python_module_05` strict checks to match Code Nexus v3.0 general rules (imports restricted to `abc`/`typing`, all builtins authorized) and removed the non-subject `super()` mandate that caused false negatives.

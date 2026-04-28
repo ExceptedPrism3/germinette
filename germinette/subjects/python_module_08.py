@@ -125,7 +125,7 @@ class Tester(BaseTester):
             return
 
         if not self.common_strict_check(
-            path, exercise_label, allowed_imports=["sys", "os", "site"]
+            path, exercise_label, allowed_imports=["sys", "os", "site", "types"]
         ):
             return
 
@@ -208,7 +208,7 @@ class Tester(BaseTester):
             path,
             exercise_label,
             allowed_imports=[
-                "pandas", "requests", "matplotlib", "numpy", "sys", "importlib"
+                "pandas", "requests", "matplotlib", "numpy", "sys", "importlib", "types"
             ],
             allow_import_related_style_errors=True,
         ):
@@ -352,7 +352,7 @@ class Tester(BaseTester):
 
         # Strict Check
         if not self.common_strict_check(
-            path, exercise_label, allowed_imports=["os", "sys", "dotenv"]
+            path, exercise_label, allowed_imports=["os", "sys", "dotenv", "types"]
         ):
             return
 
