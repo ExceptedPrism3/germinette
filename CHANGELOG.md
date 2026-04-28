@@ -4,6 +4,8 @@
 ### Fixed
 - **Module 07 auto-detection reliability**: Updated `ModuleDetector` DataDeck signatures to match v3.0 layouts (`battle.py`, `capacitor.py`, `tournament.py` plus `ex0/`, `ex1/`, `ex2/` package markers), so `germinette` now auto-detects Module 07 correctly from standard project folders.
 - **Module 08 builtin `types` allowance**: Adjusted Matrix checker import policy to accept the stdlib `types` module in Ex0/Ex1/Ex2 strict checks when students use it.
+- **Module 06 v2.0 parity completion**: Added two missing codex rules in checker logic: (1) preserve the intentional pedagogical mypy exception path for `ft_alembic_4.py`, and (2) require `alchemy/transmutation/recipes.py` to include at least one absolute import and one relative import, as demanded by Part III.
+- **Module 06 regression expansion**: Extended `tests/test_module06_v20_alignment.py` with coverage for the Alembic 4 mypy-exception allowance and transmutation import-style enforcement.
 
 ## [1.8.5] - 2026-04-27
 ### Fixed

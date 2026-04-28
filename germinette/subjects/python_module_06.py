@@ -81,9 +81,12 @@ class Tester(BaseTester):
         
         type_errors = self.check_type_hints(found_path)
         if type_errors:
-             console.print("[red]KO[/red]")
-             self.record_error(exercise_label, "Style Error (Type Hints)", type_errors)
-             return None, None
+             # Subject v2.0 (Alembic 4): accessing hidden symbol through
+             # `import alchemy` can intentionally trigger a mypy complaint.
+             if module_name != "ft_alembic_4":
+                 console.print("[red]KO[/red]")
+                 self.record_error(exercise_label, "Style Error (Type Hints)", type_errors)
+                 return None, None
         if not self.check_imports_are_project_local(found_path, exercise_label):
              console.print("[red]KO (Forbidden Import)[/red]")
              return None, None
@@ -415,6 +418,43 @@ class Tester(BaseTester):
         exercise_label = "Transmutation 0"
         status, path = self._load_module("ft_transmutation_0", exercise_label)
         if not status: return
+
+        recipes_path = os.path.join(
+            os.getcwd(), "alchemy", "transmutation", "recipes.py"
+        )
+        if not os.path.exists(recipes_path):
+            self.record_error(
+                exercise_label,
+                "Missing File",
+                "Missing mandatory file: alchemy/transmutation/recipes.py",
+            )
+            return
+        try:
+            with open(recipes_path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            has_absolute = False
+            has_relative = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    has_absolute = True
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level and node.level > 0:
+                        has_relative = True
+                    else:
+                        has_absolute = True
+            if not has_absolute or not has_relative:
+                self.record_error(
+                    exercise_label,
+                    "Structure Error",
+                    "alchemy/transmutation/recipes.py must contain at least one "
+                    "absolute import and one relative import.",
+                )
+                return
+        except Exception as e:
+            self.record_error(
+                exercise_label, "AST Error", f"Failed to parse recipes.py: {e}"
+            )
+            return
         
         out = self._run_script(path)
         if self.check_for_crash(out, exercise_label): return
