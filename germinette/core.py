@@ -134,7 +134,9 @@ class ModuleDetector:
         },
         "python_module_07": {
             # DataDeck v3.0
-            "files": ["battle.py", "capacitor.py", "tournament.py", "ex0/__init__.py", "ex1/__init__.py", "ex2/__init__.py"],
+            # Keep signatures specific: __init__.py in ex folders is too generic and
+            # can collide with other module layouts (e.g. Module 09 workspaces).
+            "files": ["battle.py", "capacitor.py", "tournament.py"],
             "dirs": ["ex0", "ex1", "ex2"]
         },
         "python_module_08": {
@@ -159,15 +161,44 @@ class ModuleDetector:
 
     @classmethod
     def detect(cls):
-        """Scans current directory and returns the detected module name or None."""
+        """Scans current directory and returns the best detected module or None.
+
+        Detection is score-based to avoid false positives when different modules
+        share generic folder layouts (for example, ex0/ex1/ex2).
+        """
         cwd = os.getcwd()
-        
+
+        best_mod = None
+        best_score = 0.0
+        best_reason = None
+
         for mod_name, signature in cls.MODULE_SIGNATURES.items():
-            # Check for specific files
-            for rel_path in signature.get("files", []):
-                if os.path.exists(os.path.join(cwd, rel_path)):
-                    console.print(f"[bold green]Detected {mod_name} based on {rel_path}[/bold green]")
-                    return mod_name
+            files = signature.get("files", [])
+            dirs = signature.get("dirs", [])
+
+            matched_files = [p for p in files if os.path.exists(os.path.join(cwd, p))]
+            matched_dirs = [d for d in dirs if os.path.isdir(os.path.join(cwd, d))]
+
+            file_hits = len(matched_files)
+            dir_hits = len(matched_dirs)
+            if file_hits == 0 and dir_hits == 0:
+                continue
+
+            file_ratio = file_hits / max(1, len(files))
+            dir_ratio = dir_hits / max(1, len(dirs))
+
+            # Files are highly distinctive; directories are secondary hints.
+            score = (file_hits * 10.0) + (dir_hits * 2.0) + file_ratio + (dir_ratio * 0.5)
+
+            if score > best_score:
+                best_score = score
+                best_mod = mod_name
+                best_reason = matched_files[0] if matched_files else matched_dirs[0]
+
+        if best_mod is not None:
+            reason = best_reason if best_reason is not None else "signature score"
+            console.print(f"[bold green]Detected {best_mod} based on {reason}[/bold green]")
+            return best_mod
 
         return None
 

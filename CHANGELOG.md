@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.8] - 2026-04-29
+### Fixed
+- **Auto-detection robustness (file checker hardening)**: Reworked `ModuleDetector.detect()` from first-hit matching to a weighted signature-scoring strategy that prioritizes distinctive required files over generic directory patterns, reducing cross-module false positives in mixed or partially-complete student repositories.
+- **Module 07 vs Module 09 collision fix**: Tightened DataDeck signatures by removing generic `ex*/__init__.py` markers from Module 07 detection, preventing Cosmic Data (`ex0/space_station.py`, `ex1/alien_contact.py`, `ex2/space_crew.py`) workspaces from being misclassified as Module 07.
+- **Root regression coverage for module detection**: Added `tests/test_module_detector_alignment.py` cases to lock Module 09 detection behavior against Module 07 signature collisions and future detector regressions.
+
 ## [1.8.7] - 2026-04-28
 ### Fixed
 - **A-Maze-ing v2.1 lint-rule parity**: Hardened `a_maze_ing` Makefile validation so the mandatory `lint` recipe now enforces the required mypy flags from the subject (`--warn-return-any`, `--warn-unused-ignores`, `--ignore-missing-imports`, `--disallow-untyped-defs`, `--check-untyped-defs`) instead of only checking for generic `mypy` presence.
