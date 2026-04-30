@@ -228,6 +228,74 @@ class Tester(BaseTester):
         except Exception:
             return 0
 
+    def _check_ex3_reducer_operator_constraint(self, path, label):
+        """Exercise 3 requires operator-style reducer handlers, not lambda substitutions."""
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+        except Exception as e:
+            self.record_error(label, "AST Error", f"Failed Ex3 reducer-policy check: {e}")
+            return False
+
+        operator_module_aliases = set()
+        operator_func_aliases = set()
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "operator":
+                        operator_module_aliases.add(alias.asname or alias.name)
+            elif isinstance(node, ast.ImportFrom) and node.module == "operator":
+                for alias in node.names:
+                    operator_func_aliases.add(alias.asname or alias.name)
+
+        reducer_fn = None
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name == "spell_reducer":
+                reducer_fn = node
+                break
+        if reducer_fn is None:
+            return True
+
+        operation_keys = {"add", "multiply", "max", "min"}
+        operator_handlers_detected = 0
+        lambda_violations = []
+
+        for node in ast.walk(reducer_fn):
+            if not isinstance(node, ast.Dict):
+                continue
+            for key_node, value_node in zip(node.keys, node.values):
+                if not isinstance(key_node, ast.Constant) or not isinstance(key_node.value, str):
+                    continue
+                op_key = key_node.value
+                if op_key not in operation_keys:
+                    continue
+                if isinstance(value_node, ast.Lambda):
+                    lambda_violations.append(op_key)
+                    continue
+                if isinstance(value_node, ast.Attribute) and isinstance(value_node.value, ast.Name):
+                    if value_node.value.id in operator_module_aliases:
+                        operator_handlers_detected += 1
+                        continue
+                if isinstance(value_node, ast.Name) and value_node.id in operator_func_aliases:
+                    operator_handlers_detected += 1
+
+        if lambda_violations:
+            self.record_error(
+                label,
+                "Structure Error",
+                "Exercise 3 reducer handlers must not use lambda substitutions for "
+                f"operations: {sorted(set(lambda_violations))}. Use operator-module functions.",
+            )
+            return False
+        if operator_handlers_detected == 0:
+            self.record_error(
+                label,
+                "Structure Error",
+                "Exercise 3 requires reducer operation handlers backed by operator-module functions.",
+            )
+            return False
+        return True
+
     # --- Tests ---
 
     def test_lambda_sanctum(self):
@@ -445,6 +513,9 @@ class Tester(BaseTester):
              return
             
         if not self.common_strict_check(path, exercise_label): return
+        if not self._check_ex3_reducer_operator_constraint(path, exercise_label):
+            console.print("[red]KO (Reducer Policy)[/red]")
+            return
 
         try:
             # 1. Reducer

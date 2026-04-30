@@ -88,3 +88,68 @@ def test_module10_ex1_signature_contract_checked(
     tester.test_higher_realm()
     errors = "\n".join(tester.grouped_errors.get("Exercise 1", []))
     assert errors == ""
+
+
+def test_module10_ex3_rejects_lambda_reducer_handlers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from germinette.subjects.python_module_10 import Tester
+
+    _write(
+        tmp_path / "ex3" / "functools_artifacts.py",
+        """
+        import functools
+        import operator
+        from functools import lru_cache, partial, singledispatch
+        from collections.abc import Callable
+
+
+        def spell_reducer(spells: list[int], operation: str) -> int:
+            ops = {
+                "add": operator.add,
+                "multiply": operator.mul,
+                "max": lambda a, b: a if a > b else b,
+                "min": lambda a, b: a if a < b else b,
+            }
+            return functools.reduce(ops[operation], spells)
+
+
+        def partial_enchanter(
+            base: Callable[..., str]
+        ) -> dict[str, Callable[..., str]]:
+            return {"fire_enchant": partial(base, 10, "Fire")}
+
+
+        @lru_cache(maxsize=None)
+        def memoized_fibonacci(n: int) -> int:
+            if n <= 1:
+                return n
+            return memoized_fibonacci(n - 1) + memoized_fibonacci(n - 2)
+
+
+        @singledispatch
+        def spell_dispatcher(value: object) -> str:
+            return f"unknown:{value}"
+
+
+        @spell_dispatcher.register
+        def _(value: int) -> str:
+            return f"damage:{value}"
+
+
+        @spell_dispatcher.register
+        def _(value: str) -> str:
+            return f"enchant:{value}"
+
+
+        @spell_dispatcher.register
+        def _(value: list) -> str:
+            return f"multi:{len(value)}"
+        """,
+    )
+
+    monkeypatch.chdir(tmp_path)
+    tester = Tester()
+    tester.test_ancient_library()
+    errors = "\n".join(tester.grouped_errors.get("Exercise 3", []))
+    assert "must not use lambda substitutions" in errors

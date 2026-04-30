@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.9] - 2026-05-01
+### Fixed
+- **Module 10 Ex3 implementation-constraint enforcement**: Hardened `python_module_10` Ancient Library checks to reject lambda substitutions inside `spell_reducer` operation maps (`add`/`multiply`/`max`/`min`) and require operator-backed reducer handlers, aligning checker behavior with the subject’s explicit technique requirement.
+- **Root regression coverage for Module 10 Ex3 reducer policy**: Extended `tests/test_module10_v30_alignment.py` with a case that verifies behavior-correct but instruction-noncompliant lambda reducer handlers are now flagged.
+
 ## [1.8.8] - 2026-04-29
 ### Fixed
 - **Auto-detection robustness (file checker hardening)**: Reworked `ModuleDetector.detect()` from first-hit matching to a weighted signature-scoring strategy that prioritizes distinctive required files over generic directory patterns, reducing cross-module false positives in mixed or partially-complete student repositories.
