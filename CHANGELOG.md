@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.10] - 2026-05-02
+### Fixed
+- **Module 09 Cosmic Data (v3.0) Enum resolution**: Checker fixtures now resolve `ContactType` / `Rank` members by subject semantic tokens (case-insensitive match on member **name** or **`.value`**), so idiomatic enums such as `RADIO = "radio"` or `COMMANDER = "commander"` no longer fail before validation with misleading `AttributeError`-style messages.
+- **Module 09 Ex2 crew cardinality + schema**: Enforced PDF `crew` size **1–12** via runtime probes (empty crew and 13-member crew must reject) and optional JSON-schema `minItems`/`maxItems` alignment when Pydantic exposes them.
+- **Module 09 Ex2 PDF field bounds**: Added runtime rejection probes for `SpaceMission` (`mission_id`/`mission_name`/`destination` lengths, `duration_days`, `budget_millions`) and `CrewMember` (string lengths, `age`, `years_experience`) so spec-incomplete models without proper `Field` constraints are less likely to pass on behavior alone.
+- **Module 09 Ex1 PDF field bounds**: Added analogous runtime probes for `AlienContact` (`contact_id`, `location`, `signal_strength`, `duration_minutes`, `witness_count`, optional `message_received` max length).
+- **Root regression coverage for Module 09**: Extended `tests/test_module09_v30_alignment.py` with cases for uppercase Enum member naming and unbounded `crew` lists.
+
 ## [1.8.9] - 2026-05-01
 ### Fixed
 - **Module 10 Ex3 implementation-constraint enforcement**: Hardened `python_module_10` Ancient Library checks to reject lambda substitutions inside `spell_reducer` operation maps (`add`/`multiply`/`max`/`min`) and require operator-backed reducer handlers, aligning checker behavior with the subject’s explicit technique requirement.

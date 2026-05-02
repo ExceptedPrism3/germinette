@@ -8,6 +8,8 @@ import importlib.util
 import traceback
 import ast
 from datetime import datetime, date
+from enum import Enum
+from typing import Type
 
 console = Console()
 
@@ -32,6 +34,453 @@ class Tester(BaseTester):
         if exercise_label not in self.grouped_errors:
             self.grouped_errors[exercise_label] = []
         self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
+
+    @staticmethod
+    def _resolve_enum_member(enum_cls: Type[Enum], semantic: str):
+        """Map subject semantic tokens (radio, commander, …) to Enum members regardless of Python member naming."""
+        want = semantic.strip().lower()
+        if not isinstance(enum_cls, type) or not issubclass(enum_cls, Enum):
+            raise TypeError(f"Expected Enum type, got {enum_cls}")
+        picks: dict[int, Enum] = {}
+        for member in enum_cls:
+            nm = getattr(member, "name", "").lower()
+            val = getattr(member, "value", None)
+            if nm == want:
+                picks.setdefault(id(member), member)
+            elif isinstance(val, str) and val.lower() == want:
+                picks.setdefault(id(member), member)
+            elif val is not None and str(val).strip().lower() == want:
+                picks.setdefault(id(member), member)
+        unique = list(picks.values())
+        if len(unique) == 1:
+            return unique[0]
+        if not unique:
+            raise LookupError(
+                f"No {enum_cls.__name__} member matches semantic {semantic!r} "
+                f"(accepted: member.name or .value case-insensitive)."
+            )
+        raise LookupError(
+            f"Ambiguous Enum match for {semantic!r} in {enum_cls.__name__}: {unique}"
+        )
+
+    def _crew_list_bounds_from_json_schema(self, model_cls):
+        """Return (min_items, max_items) for SpaceMission.crew if JSON schema exposes them."""
+        try:
+            js = model_cls.model_json_schema()
+        except Exception:
+            return None, None
+        defs = js.get("$defs") or {}
+
+        def deref(node):
+            if not isinstance(node, dict):
+                return node
+            ref = node.get("$ref")
+            if isinstance(ref, str) and "/" in ref:
+                key = ref.rsplit("/", 1)[-1]
+                inner = defs.get(key)
+                if inner is not None:
+                    return deref(inner)
+            if "anyOf" in node:
+                for cand in node["anyOf"]:
+                    got = deref(cand)
+                    if isinstance(got, dict) and got.get("type") == "array":
+                        return got
+            return node
+
+        prop = js.get("properties") or {}
+        crew_node = prop.get("crew")
+        if crew_node is None:
+            return None, None
+        resolved = deref(crew_node)
+        if not isinstance(resolved, dict) or resolved.get("type") != "array":
+            return None, None
+        mi = resolved.get("minItems")
+        ma = resolved.get("maxItems")
+        try:
+            return (int(mi) if mi is not None else None, int(ma) if ma is not None else None)
+        except (TypeError, ValueError):
+            return None, None
+
+    @staticmethod
+    def _accepts_invalid_payload(fn):
+        """True if fn() runs without raising (invalid payload wrongly accepted)."""
+        try:
+            fn()
+            return True
+        except Exception:
+            return False
+
+    def _check_ex2_space_mission_scalar_field_bounds(
+        self, exercise_label, SpaceMission, cmdr_inst, pilot_inst
+    ):
+        """PDF Exercise 2: SpaceMission ids/names/ranges enforced via Field (runtime probes)."""
+        launch = datetime.now()
+        failures: list[str] = []
+
+        def base_mission(extra):
+            kw = dict(
+                mission_id="M2029_BASE01",
+                mission_name="Baseline mission name long enough here",
+                destination="Moon",
+                launch_date=launch,
+                duration_days=200,
+                crew=[cmdr_inst, pilot_inst],
+                budget_millions=100.0,
+            )
+            kw.update(extra)
+            return kw
+
+        checks = [
+            (
+                'SpaceMission must reject mission_id shorter than 5 characters '
+                '(subject: mission_id length 5–15).',
+                lambda: SpaceMission(**base_mission({"mission_id": "M202"})),
+            ),
+            (
+                'SpaceMission must reject mission_id longer than 15 characters '
+                '(subject: mission_id length 5–15).',
+                lambda: SpaceMission(
+                    **base_mission({"mission_id": "P" + "0" * 15})
+                ),
+            ),
+            (
+                'SpaceMission must reject mission_name shorter than 3 characters '
+                '(subject: mission_name length 3–100).',
+                lambda: SpaceMission(
+                    **base_mission({"mission_name": "Mo"})
+                ),
+            ),
+            (
+                'SpaceMission must reject mission_name longer than 100 characters '
+                '(subject: mission_name length 3–100).',
+                lambda: SpaceMission(
+                    **base_mission(
+                        {"mission_name": ("X" * 101)},
+                    ),
+                ),
+            ),
+            (
+                'SpaceMission must reject destination shorter than 3 characters '
+                '(subject: destination length 3–50).',
+                lambda: SpaceMission(
+                    **base_mission({"destination": "MZ"}),
+                ),
+            ),
+            (
+                'SpaceMission must reject destination longer than 50 characters '
+                '(subject: destination length 3–50).',
+                lambda: SpaceMission(
+                    **base_mission(
+                        {"destination": "D" * 51},
+                    ),
+                ),
+            ),
+            (
+                'SpaceMission must reject duration_days < 1 '
+                '(subject: duration_days 1–3650).',
+                lambda: SpaceMission(**base_mission({"duration_days": 0})),
+            ),
+            (
+                'SpaceMission must reject duration_days > 3650 '
+                '(subject: duration_days 1–3650).',
+                lambda: SpaceMission(**base_mission({"duration_days": 4000})),
+            ),
+            (
+                'SpaceMission must reject budget_millions < 1.0 '
+                '(subject: budget_millions 1.0–10000.0).',
+                lambda: SpaceMission(
+                    **base_mission({"budget_millions": 0.5}),
+                ),
+            ),
+            (
+                'SpaceMission must reject budget_millions > 10000.0 '
+                '(subject: budget_millions 1.0–10000.0).',
+                lambda: SpaceMission(
+                    **base_mission({"budget_millions": 11000.0}),
+                ),
+            ),
+        ]
+
+        for msg, thunk in checks:
+            if self._accepts_invalid_payload(thunk):
+                failures.append(msg)
+        if failures:
+            self.record_error(
+                exercise_label,
+                "Logic Error",
+                "PDF SpaceMission Field constraints violated (must reject):\n"
+                + "\n".join(f"- {f}" for f in failures),
+            )
+            return False
+        return True
+
+    def _check_ex2_crew_member_scalar_field_bounds(
+        self,
+        exercise_label,
+        CrewMember,
+        rk_commander,
+    ):
+        """PDF Exercise 2: CrewMember string ranges and numeric bounds (runtime probes)."""
+        failures: list[str] = []
+
+        base = dict(
+            member_id="MBX001",
+            name="Valid Enough Name",
+            rank=rk_commander,
+            age=30,
+            specialization="Enough spec text",
+            years_experience=10,
+            is_active=True,
+        )
+
+        def member(extra):
+            m = dict(base)
+            m.update(extra)
+            return CrewMember(**m)
+
+        checks = [
+            (
+                'CrewMember must reject member_id shorter than 3 chars '
+                '(subject: member_id length 3–10).',
+                lambda: member({"member_id": "AB"}),
+            ),
+            (
+                'CrewMember must reject member_id longer than 10 chars '
+                '(subject: member_id length 3–10).',
+                lambda: member({"member_id": "ABCDEFGHIJX"}),
+            ),
+            (
+                'CrewMember must reject name shorter than 2 chars '
+                '(subject: name length 2–50).',
+                lambda: member({"name": "A"}),
+            ),
+            (
+                'CrewMember must reject name longer than 50 chars '
+                '(subject: name length 2–50).',
+                lambda: member({"name": "N" * 51}),
+            ),
+            (
+                'CrewMember must reject specialization shorter than 3 chars '
+                '(subject: specialization length 3–30).',
+                lambda: member({"specialization": "AB"}),
+            ),
+            (
+                'CrewMember must reject specialization longer than 30 chars '
+                '(subject: specialization length 3–30).',
+                lambda: member({"specialization": "Z" * 31}),
+            ),
+            (
+                'CrewMember must reject age below 18 (subject: age 18–80).',
+                lambda: member({"age": 17}),
+            ),
+            (
+                'CrewMember must reject age above 80 (subject: age 18–80).',
+                lambda: member({"age": 81}),
+            ),
+            (
+                'CrewMember must reject years_experience > 50 '
+                '(subject: years_experience 0–50).',
+                lambda: member({"years_experience": 55}),
+            ),
+            (
+                'CrewMember must reject years_experience < 0 '
+                '(subject: years_experience 0–50).',
+                lambda: member({"years_experience": -1}),
+            ),
+        ]
+
+        for msg, thunk in checks:
+            if self._accepts_invalid_payload(thunk):
+                failures.append(msg)
+        if failures:
+            self.record_error(
+                exercise_label,
+                "Logic Error",
+                "PDF CrewMember Field constraints violated (must reject):\n"
+                + "\n".join(f"- {f}" for f in failures),
+            )
+            return False
+        return True
+
+    def _check_ex1_pdf_field_constraints(self, exercise_label, AlienContact, ct_radio):
+        """PDF Exercise 1: AlienContact Field bounds (strings + numeric intervals), runtime probes."""
+        ts = datetime.now()
+        failures: list[str] = []
+
+        base = dict(
+            contact_id="AC_BASE_MAIN",
+            timestamp=ts,
+            location="Nevada Test Range Bunker Nine",
+            contact_type=ct_radio,
+            signal_strength=4.5,
+            duration_minutes=30,
+            witness_count=2,
+            is_verified=False,
+        )
+
+        def contact(**upd):
+            d = dict(base)
+            d.update(upd)
+            return AlienContact(**d)
+
+        checks = [
+            (
+                "contact_id shorter than 5 characters (subject: 5–15).",
+                lambda: contact(contact_id="AC_Z"),
+            ),
+            (
+                "contact_id longer than 15 characters (subject: 5–15).",
+                lambda: contact(contact_id="AC" + ("Z" * 14)),
+            ),
+            (
+                "location shorter than 3 characters (subject: 3–100).",
+                lambda: contact(location="Nv"),
+            ),
+            (
+                "location longer than 100 characters (subject: 3–100).",
+                lambda: contact(location="L" * 101),
+            ),
+            (
+                "signal_strength below 0.0 (subject: 0.0–10.0).",
+                lambda: contact(signal_strength=-0.01),
+            ),
+            (
+                "signal_strength above 10.0 (subject: 0.0–10.0).",
+                lambda: contact(signal_strength=10.5),
+            ),
+            (
+                "duration_minutes below 1 (subject: 1–1440).",
+                lambda: contact(duration_minutes=0),
+            ),
+            (
+                "duration_minutes above 1440 (subject: 1–1440).",
+                lambda: contact(duration_minutes=2000),
+            ),
+            (
+                "witness_count below 1 (subject: 1–100).",
+                lambda: contact(witness_count=0),
+            ),
+            (
+                "witness_count above 100 (subject: 1–100).",
+                lambda: contact(witness_count=101),
+            ),
+            (
+                "message_received beyond 500 characters "
+                "(subject: optional max 500).",
+                lambda: contact(message_received=("M" * 501)),
+            ),
+        ]
+        desc = []
+        for label, thunk in checks:
+            if self._accepts_invalid_payload(thunk):
+                desc.append(label)
+        if desc:
+            self.record_error(
+                exercise_label,
+                "Logic Error",
+                "PDF AlienContact Field constraints violated (must reject):\n"
+                + "\n".join(f"- {f}" for f in desc),
+            )
+            return False
+        return True
+
+    def _check_ex2_pdf_field_constraints(
+        self,
+        exercise_label,
+        SpaceMission,
+        CrewMember,
+        commander_rank,
+        pilot_rank,
+        crew_commander_person,
+        crew_pilot_person,
+    ):
+        """PDF Exercise 2: crew cardinality plus SpaceMission/CrewMember Field bounds by runtime probes."""
+
+        mission_kwargs = lambda crew: dict(
+            mission_id="M_BOUNDS_CHK",
+            mission_name="Bounds Check",
+            destination="Moon",
+            launch_date=datetime.now(),
+            duration_days=10,
+            crew=crew,
+            budget_millions=100.0,
+        )
+
+        crew_empty_accepted = False
+        crew_oversized_accepted = False
+        try:
+            SpaceMission(**mission_kwargs([]))
+            crew_empty_accepted = True
+        except Exception:
+            pass
+
+        thirteen = []
+        for i in range(13):
+            thirteen.append(
+                CrewMember(
+                    member_id=f"MB{i:02d}",
+                    name=f"Member {i}",
+                    rank=pilot_rank,
+                    age=25,
+                    specialization="Ops",
+                    years_experience=i % 10,
+                    is_active=True,
+                )
+            )
+        thirteen[0] = CrewMember(
+            member_id="MB_CMD",
+            name="Command Holder",
+            rank=commander_rank,
+            age=45,
+            specialization="Cmd",
+            years_experience=10,
+            is_active=True,
+        )
+        try:
+            SpaceMission(**mission_kwargs(thirteen))
+            crew_oversized_accepted = True
+        except Exception:
+            pass
+
+        if crew_empty_accepted:
+            self.record_error(
+                exercise_label,
+                "Logic Error",
+                "SpaceMission.crew must reject an empty crew (subject requires 1–12 members).",
+            )
+            return False
+        if crew_oversized_accepted:
+            self.record_error(
+                exercise_label,
+                "Logic Error",
+                "SpaceMission.crew must reject lists longer than 12 members "
+                "(subject requires 1–12 members).",
+            )
+            return False
+
+        mi, ma = self._crew_list_bounds_from_json_schema(SpaceMission)
+        if mi is not None and ma is not None and (mi != 1 or ma != 12):
+            self.record_error(
+                exercise_label,
+                "Structure Error",
+                f"crew list constraints in model JSON schema should be min_items=1, max_items=12; "
+                f"got minItems={mi}, maxItems={ma}.",
+            )
+            return False
+        if not self._check_ex2_space_mission_scalar_field_bounds(
+            exercise_label,
+            SpaceMission,
+            crew_commander_person,
+            crew_pilot_person,
+        ):
+            return False
+        if not self._check_ex2_crew_member_scalar_field_bounds(
+            exercise_label,
+            CrewMember,
+            commander_rank,
+        ):
+            return False
+        return True
 
     def _load_module(self, ex_num, main_file):
         """Standardized loading logic for python_module_09 structure"""
@@ -320,13 +769,28 @@ class Tester(BaseTester):
                  console.print("[red]KO[/red]")
                  return
 
+             try:
+                 ct_radio = self._resolve_enum_member(ContactType, "radio")
+                 ct_telepathic = self._resolve_enum_member(ContactType, "telepathic")
+                 ct_physical = self._resolve_enum_member(ContactType, "physical")
+             except LookupError as e:
+                 self.record_error(exercise_label, "Structure Error", str(e))
+                 console.print("[red]KO[/red]")
+                 return
+
+             if not self._check_ex1_pdf_field_constraints(
+                 exercise_label, AlienContact, ct_radio
+             ):
+                 console.print("[red]KO[/red]")
+                 return
+
              # Valid
              try:
                  AlienContact(
                      contact_id="AC_2024_001",
                      timestamp=datetime.now(),
                      location="Area 51",
-                     contact_type=ContactType.radio,
+                     contact_type=ct_radio,
                      signal_strength=5.0,
                      duration_minutes=10,
                      witness_count=1,
@@ -344,7 +808,7 @@ class Tester(BaseTester):
                       contact_id="XX_2024",
                       timestamp=datetime.now(),
                       location="Loc",
-                      contact_type=ContactType.radio,
+                      contact_type=ct_radio,
                       signal_strength=5.0,
                       duration_minutes=10,
                       witness_count=1
@@ -360,7 +824,7 @@ class Tester(BaseTester):
                       contact_id="AC_2024",
                       timestamp=datetime.now(),
                       location="Loc",
-                      contact_type=ContactType.telepathic,
+                      contact_type=ct_telepathic,
                       signal_strength=5.0,
                       duration_minutes=10,
                       witness_count=1 # Must be >= 3
@@ -376,7 +840,7 @@ class Tester(BaseTester):
                       contact_id="AC_PHYS",
                       timestamp=datetime.now(),
                       location="Loc",
-                      contact_type=ContactType.physical,
+                      contact_type=ct_physical,
                       signal_strength=5.0,
                       duration_minutes=10,
                       witness_count=5,
@@ -393,7 +857,7 @@ class Tester(BaseTester):
                       contact_id="AC_SIG",
                       timestamp=datetime.now(),
                       location="Loc",
-                      contact_type=ContactType.radio,
+                      contact_type=ct_radio,
                       signal_strength=8.5,
                       duration_minutes=10,
                       witness_count=1
@@ -436,15 +900,33 @@ class Tester(BaseTester):
                  self.record_error(exercise_label, "Structure Error", "Missing classes")
                  console.print("[red]KO[/red]")
                  return
+
+             try:
+                 rk_commander = self._resolve_enum_member(Rank, "commander")
+                 rk_lieutenant = self._resolve_enum_member(Rank, "lieutenant")
+                 rk_cadet = self._resolve_enum_member(Rank, "cadet")
+                 rk_captain = self._resolve_enum_member(Rank, "captain")
+             except LookupError as e:
+                 self.record_error(exercise_label, "Structure Error", str(e))
+                 console.print("[red]KO[/red]")
+                 return
              
              # Create Valid Crew
              cmdr = CrewMember(
-                 member_id="CM001", name="Cmdr Shep", rank=Rank.commander,
-                 age=40, specialization="Command", years_experience=15
+                 member_id="CM001",
+                 name="Cmdr Shep",
+                 rank=rk_commander,
+                 age=40,
+                 specialization="Command",
+                 years_experience=15,
              )
              pilot = CrewMember(
-                 member_id="CM002", name="Joker", rank=Rank.lieutenant,
-                 age=30, specialization="Pilot", years_experience=8
+                 member_id="CM002",
+                 name="Joker",
+                 rank=rk_lieutenant,
+                 age=30,
+                 specialization="Pilot",
+                 years_experience=8,
              )
              
              # Valid Mission
@@ -460,6 +942,18 @@ class Tester(BaseTester):
                  )
              except Exception as e:
                  self.record_error(exercise_label, "Validation Error", f"Valid input failed: {e}")
+                 console.print("[red]KO[/red]")
+                 return
+
+             if not self._check_ex2_pdf_field_constraints(
+                 exercise_label,
+                 SpaceMission,
+                 CrewMember,
+                 rk_commander,
+                 rk_lieutenant,
+                 cmdr,
+                 pilot,
+             ):
                  console.print("[red]KO[/red]")
                  return
 
@@ -481,12 +975,20 @@ class Tester(BaseTester):
 
              # Invalid Mission: Long mission without 50% experienced crew
              cadet1 = CrewMember(
-                 member_id="CM003", name="Newbie1", rank=Rank.cadet,
-                 age=20, specialization="Science", years_experience=1
+                 member_id="CM003",
+                 name="Newbie1",
+                 rank=rk_cadet,
+                 age=20,
+                 specialization="Science",
+                 years_experience=1,
              )
              cadet2 = CrewMember(
-                 member_id="CM004", name="Newbie2", rank=Rank.cadet,
-                 age=21, specialization="Engineering", years_experience=2
+                 member_id="CM004",
+                 name="Newbie2",
+                 rank=rk_cadet,
+                 age=21,
+                 specialization="Engineering",
+                 years_experience=2,
              )
              try:
                  SpaceMission(
@@ -505,9 +1007,13 @@ class Tester(BaseTester):
 
              # Invalid Mission: Inactive crew member
              inactive = CrewMember(
-                 member_id="CM005", name="Retired", rank=Rank.captain,
-                 age=55, specialization="Command", years_experience=25,
-                 is_active=False
+                 member_id="CM005",
+                 name="Retired",
+                 rank=rk_captain,
+                 age=55,
+                 specialization="Command",
+                 years_experience=25,
+                 is_active=False,
              )
              try:
                  SpaceMission(
