@@ -40,13 +40,12 @@ def _terminal_hyperlink_url_for_file(abs_path: str) -> str:
     """
     URL for Rich [link=...] / OSC-8 hyperlinks.
 
-    In VS Code's integrated terminal, ``vscode://file/...`` and plain
-    ``file://`` often go to the OS handler (wrong app / new window). The
+    In VS Code's integrated terminal, ``vscode://file/...`` and plain ``file://``
+    often go to the OS handler (wrong app / new window). The
     ``vscode://vscode/open?url=file%3A%2F%2F...`` form is handled by the running
     editor and opens the file in the same window.
 
-    Other terminals fall back
-    to ``file:///...``.
+    Other terminals fall back to ``file:///...``.
     """
     p = Path(abs_path).resolve()
     in_editor_terminal = os.environ.get("TERM_PROGRAM") == "vscode"
