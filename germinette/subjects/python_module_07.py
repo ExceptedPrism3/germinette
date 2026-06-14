@@ -215,7 +215,8 @@ class Tester(BaseTester):
                 "Bloomelle", "heal",
                 "Shiftling", "Normal type",
                 "Morphagon", "transform",
-                "revert"
+                "revert", "morphs into",
+                "stabilizes its form"
             ]
 
             missing = [r for r in required if r.lower() not in out.lower()]
