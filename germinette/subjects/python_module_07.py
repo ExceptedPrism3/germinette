@@ -210,11 +210,17 @@ class Tester(BaseTester):
                 "Sproutling", "Grass type",
                 "Bloomelle", "heal",
                 "Shiftling", "Normal type",
-                "Morphagon", "transform",
-                "revert"
+                "Morphagon", "transform"
             ]
 
+            # v3.0 alignment update (PR #18, contributed by eloiberlinger1):
+            # Support alternative expected outputs ("revert" OR both "morphs into" and "stabilizes its form")
+            # to handle different subject PDF wording.
             missing = [r for r in required if r.lower() not in out.lower()]
+            out_lower = out.lower()
+            if "revert" not in out_lower and not ("morphs into" in out_lower and "stabilizes its form" in out_lower):
+                 missing.append("revert OR (morphs into AND stabilizes its form)")
+
             if not missing:
                 console.print("[green]OK[/green]")
             else:

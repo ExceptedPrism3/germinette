@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.12] - 2026-06-16
+### Fixed
+- **Module 07 capabilities variant support** (PR #18, contributed by eloiberlinger1): Supported alternative expected output strings ("morphs into" and "stabilizes its form" as alternatives to "revert") in Exercise 1 Capacitor checks, handling different versions of the subject PDF.
+
 ## [1.8.11] - 2026-06-16
 ### Fixed
 - **Module 03 Primitive types allowance** (Issue #16, reported by Ketaminepunch): Authorized the standard types `str`, `int`, and `float` globally across all exercises to avoid false positives on standard constructor calls like `float()` or `str()`.
