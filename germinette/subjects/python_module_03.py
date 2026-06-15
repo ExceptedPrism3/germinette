@@ -10,6 +10,10 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold purple]Testing Module 03: Data Quest (v3.0)[/bold purple]"
+        # v3.0 alignment update (Issue #16, reported by Ketaminepunch):
+        # Allow standard types (str, int, float) globally across all exercises.
         self.exercises = [
             ("ft_command_quest", self.test_command_quest),
             ("ft_score_analytics", self.test_score_analytics),
@@ -19,12 +23,6 @@ class Tester(BaseTester):
             ("ft_data_stream", self.test_data_stream),
             ("ft_data_alchemist", self.test_data_alchemist),
         ]
-        self.grouped_errors = {}
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _load_module(self, module_name, exercise_label):
         cwd = os.getcwd()
@@ -80,68 +78,7 @@ class Tester(BaseTester):
             self.record_error(exercise_label, "Style Error (Missing Type Hints)", type_hint_errors)
             return None, None
             
-        return "FOUND", found_path 
-
-    def run(self, exercise_name=None):
-        console.print("[bold purple]Testing Module 03: Data Quest (v3.0)[/bold purple]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
-        if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
-        else:
-            for _, func in self.exercises:
-                func()
-        
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
-
-    def verify_strict(self, path, exercise_label, allowed_funcs, allowed_imports=["sys"], enforce_try_except=False):
-        err = self.check_no_file_io(path)
-        if err:
-            console.print(f"[red]KO (Forbidden Operation)[/red]")
-            self.record_error(exercise_label, "Forbidden Operation", err)
-            return False
-
-        err = self.check_imports(path, allowed_imports)
-        if err:
-            console.print(f"[red]KO (Forbidden Import)[/red]")
-            self.record_error(exercise_label, "Forbidden Import", err)
-            return False
-
-        if enforce_try_except:
-            err = self.check_try_except(path, exercise_label)
-            if err:
-                console.print(f"[red]KO (Strictness)[/red]")
-                self.record_error(exercise_label, "Structure Error", err)
-                return False
-
-        err = self.check_authorized_functions(path, allowed_funcs)
-        if err:
-            console.print(f"[red]KO (Forbidden Function)[/red]")
-            self.record_error(exercise_label, "Authorized Functions", err)
-            return False
-        
-        return True
+        return "FOUND", found_path
 
     # --- Exercise Tests ---
 
@@ -151,7 +88,7 @@ class Tester(BaseTester):
         status, path = self._load_module("ft_command_quest", exercise_label)
         if not status: return
 
-        if not self.verify_strict(path, exercise_label, ["len", "print"], allowed_imports=["sys"]): return
+        if not self.verify_strict(path, exercise_label, ["len", "print", "str", "int", "float"], allowed_imports=["sys"]): return
 
         out1 = self._run_script_args(path, [])
         if self.check_for_crash(out1, exercise_label): return
@@ -176,7 +113,7 @@ class Tester(BaseTester):
         if not status: return
 
         if not self.verify_strict(path, exercise_label, 
-                                  ["len", "sum", "max", "min", "int", "print"], 
+                                  ["len", "sum", "max", "min", "int", "print", "str", "float"], 
                                   allowed_imports=["sys"], 
                                   enforce_try_except=True): return
 
@@ -204,7 +141,7 @@ class Tester(BaseTester):
 
         # v3.0 authorized: import math, math.sqrt(), input(), round(), print()
         if not self.verify_strict(path, exercise_label, 
-                                  ["tuple", "float", "round", "print", "input"], 
+                                  ["tuple", "float", "round", "print", "input", "str", "int"], 
                                   allowed_imports=["math"],
                                   enforce_try_except=True): return
 
@@ -261,7 +198,7 @@ class Tester(BaseTester):
         # authorizes: len(), print(), import random, random.*, set(), set.union() /
         # set.intersection() / set.difference() (no sys.argv exercise).
         if not self.verify_strict(
-            path, exercise_label, ["set", "len", "print"], allowed_imports=["random"]
+            path, exercise_label, ["set", "len", "print", "str", "int", "float"], allowed_imports=["random"]
         ):
             return
 
@@ -314,7 +251,7 @@ class Tester(BaseTester):
         # v3.0 authorized: import sys, sys.argv, len(), print(), sum(), list(),
         # round(), dict.keys(), dict.values(), dict.update()
         if not self.verify_strict(path, exercise_label, 
-                                  ["dict", "len", "print", "keys", "values", "update", "int", "sum", "round", "list"], 
+                                  ["dict", "len", "print", "keys", "values", "update", "int", "sum", "round", "list", "str", "float"], 
                                   allowed_imports=["sys"]): return
 
         # Sample from v3.0 subject includes duplicate + invalid entries.
@@ -356,7 +293,7 @@ class Tester(BaseTester):
         if not status: return
 
         if not self.verify_strict(path, exercise_label,
-                                  ["next", "iter", "range", "len", "print", "tuple"],
+                                  ["next", "iter", "range", "len", "print", "tuple", "str", "int", "float"],
                                   allowed_imports=["sys", "typing", "random"]):
              return
 
@@ -390,7 +327,7 @@ class Tester(BaseTester):
         # v3.0 alignment update (Issue #13, reported by koldoest26):
         # random import and comprehension expectations were updated for the new subject.
         # v3.0 authorized: import random, random.*, print(), len(), sum(), round()
-        if not self.verify_strict(path, exercise_label, ["len", "print", "sum", "round", "int", "float"], allowed_imports=["random"]): return
+        if not self.verify_strict(path, exercise_label, ["len", "print", "sum", "round", "int", "float", "str"], allowed_imports=["random"]): return
 
         out = self._run_script_args(path, [])
         if self.check_for_crash(out, exercise_label): return

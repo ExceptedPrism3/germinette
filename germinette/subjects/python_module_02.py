@@ -11,6 +11,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold blue]Testing Module 02: Garden Guardian (v3.0)[/bold blue]"
         self.exercises = [
             ("ft_first_exception", self.test_first_exception),
             ("ft_raise_exception", self.test_raise_exception),
@@ -18,12 +20,6 @@ class Tester(BaseTester):
             ("ft_custom_errors", self.test_custom_errors),
             ("ft_finally_block", self.test_finally_block),
         ]
-        self.grouped_errors = {}
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _parse_tree(self, path):
         try:
@@ -104,36 +100,6 @@ class Tester(BaseTester):
             console.print("[red]KO[/red]")
             self.record_error(exercise_label, "Import Error", str(e))
             return None, None
-
-    def run(self, exercise_name=None):
-        console.print("[bold blue]Testing Module 02: Garden Guardian (v3.0)[/bold blue]")
-
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
-        if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error("Exercise filter", "Unknown exercise",
-                                  f"No exercise matches '{exercise_name}'.")
-        else:
-            for _, func in self.exercises:
-                func()
-
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
 
     # --- Exercise Tests ---
 

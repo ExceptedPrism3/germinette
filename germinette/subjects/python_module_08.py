@@ -10,6 +10,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold cyan]Testing Module 08: The Matrix[/bold cyan]"
         self.exercises = [
             ("ex00", self.test_the_matrix),
             ("ex0", self.test_the_matrix), # Alias
@@ -18,7 +20,6 @@ class Tester(BaseTester):
             ("ex02", self.test_accessing_mainframe),
             ("ex2", self.test_accessing_mainframe), # Alias
         ]
-        self.grouped_errors = {}
         self.required_oracle_keys = [
             "MATRIX_MODE",
             "DATABASE_URL",
@@ -26,11 +27,6 @@ class Tester(BaseTester):
             "LOG_LEVEL",
             "ZION_ENDPOINT",
         ]
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _load_module_path(self, ex_dir_name, main_file):
         cwd = os.getcwd()
@@ -425,38 +421,12 @@ class Tester(BaseTester):
              console.print(f"[red]KO (Execution Error: {e})[/red]")
 
     def run(self, exercise_name=None):
-        console.print("[bold cyan]Testing Module 08: The Matrix[/bold cyan]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
         if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
+            super().run(exercise_name)
         else:
-            # Run all unique
             visited = set()
             for name, func in self.exercises:
                 if func not in visited:
                     func()
                     visited.add(func)
-
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
+            self.display_error_report()

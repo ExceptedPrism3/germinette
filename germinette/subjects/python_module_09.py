@@ -15,6 +15,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold purple]Testing Module 09: Cosmic Data[/bold purple]"
         self.exercises = [
             ("ex00", self.test_space_station),
             ("ex0", self.test_space_station),
@@ -23,17 +25,11 @@ class Tester(BaseTester):
             ("ex02", self.test_space_crew),
             ("ex2", self.test_space_crew),
         ]
-        self.grouped_errors = {}
         self.required_ex_files = {
             "ex0": "space_station.py",
             "ex1": "alien_contact.py",
             "ex2": "space_crew.py",
         }
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     @staticmethod
     def _resolve_enum_member(enum_cls: Type[Enum], semantic: str):
@@ -1037,39 +1033,13 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def run(self, exercise_name=None):
-        console.print("[bold purple]Testing Module 09: Cosmic Data[/bold purple]")
-        
-        # Ensure imports work for local files
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
         self._check_project_structure()
-
         if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
+            super().run(exercise_name)
         else:
             visited = set()
             for name, func in self.exercises:
                 if func not in visited:
                     func()
                     visited.add(func)
-
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
+            self.display_error_report()

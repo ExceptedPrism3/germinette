@@ -77,6 +77,8 @@ def main() -> None:
     parser.add_argument("module", nargs="?", help="Module to test (e.g., module_00)")
     parser.add_argument("--exercise", "-e", help="Specific exercise to test")
     parser.add_argument("--update", "-u", action="store_true", help="Update Germinette to the latest version")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose / debug printing")
+    parser.add_argument("--version", "-v", action="version", version=f"germinette {__version__}")
     
     args = parser.parse_args()
 
@@ -129,10 +131,10 @@ def main() -> None:
                      os.chdir(abs_path)
                      console.print(f"[bold blue]Switched working directory to:[/bold blue] {abs_path}")
             
-            run_outcome = runner.run_module(module_name_extracted, args.exercise)
+            run_outcome = runner.run_module(module_name_extracted, args.exercise, verbose=args.verbose)
         else:
             # interactive mode or auto-detect
-            run_outcome = runner.interactive_menu()
+            run_outcome = runner.interactive_menu(verbose=args.verbose)
     finally:
         # Cleanup __pycache__
         GerminetteRunner.cleanup_pycache()
@@ -190,6 +192,16 @@ def main() -> None:
                 f"[dim]Germinette v{__version__} — [yellow]could not check for updates[/yellow] "
                 f"(offline?) · [bold]germinette -u[/bold] when online[/dim]"
             )
+        
+        # Exit with appropriate code
+        if run_outcome is True:
+            sys.exit(0)
+        elif run_outcome is False:
+            sys.exit(1)
+        elif run_outcome is None:
+            if args.module:
+                sys.exit(2)
+            sys.exit(0)
 
 if __name__ == "__main__":
     main()

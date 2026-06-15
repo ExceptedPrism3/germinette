@@ -15,21 +15,16 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
-        self.grouped_errors = {}
+        super().__init__()
+        self.title = "[bold purple]Testing Project: A-Maze-ing (v2.1)[/bold purple]"
         self.warnings = []
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(
-            f"[bold]{error_type}[/bold]\n{message}"
-        )
 
     def _error_count(self, exercise_label):
         return len(self.grouped_errors.get(exercise_label, []))
 
     def run(self, exercise_name=None):
-        console.print("[bold purple]Testing Project: A-Maze-ing (v2.1)[/bold purple]")
+        if self.title:
+            console.print(self.title)
         self.test_structure_and_files()
         self.test_makefile()
         self.test_config_format()
@@ -38,23 +33,9 @@ class Tester(BaseTester):
         self.test_main_script_and_output()
         self.test_seed_interactive_regen_logic()
 
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(
-                    Panel(
-                        content,
-                        title=f"[bold red]{label}[/bold red]",
-                        border_style="red",
-                        expand=False,
-                    )
-                )
-                console.print()
+        self.display_error_report()
 
-        if self.warnings:
+        if getattr(self, 'warnings', []):
             console.rule("[bold yellow]Non-blocking Warnings[/bold yellow]")
             console.print(
                 "[yellow]These warnings do not fail the checker, but are useful for final submission readiness.[/yellow]"

@@ -14,6 +14,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold magenta]Testing Module 10: FuncMage Chronicles[/bold magenta]"
         self.exercises = [
             ("ex00", self.test_lambda_sanctum),
             ("ex0", self.test_lambda_sanctum),
@@ -26,12 +28,6 @@ class Tester(BaseTester):
             ("ex04", self.test_masters_tower),
             ("ex4", self.test_masters_tower),
         ]
-        self.grouped_errors = {}
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _load_module(self, ex_num, main_file):
         """Standardized loading logic for python_module_10"""
@@ -724,37 +720,12 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def run(self, exercise_name=None):
-        console.print("[bold magenta]Testing Module 10: FuncMage Chronicles[/bold magenta]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
         if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
+            super().run(exercise_name)
         else:
             visited = set()
             for name, func in self.exercises:
                 if func not in visited:
                     func()
                     visited.add(func)
-
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
+            self.display_error_report()

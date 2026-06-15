@@ -213,12 +213,12 @@ class GerminetteRunner:
                     modules.append(f[:-3])
         return sorted(modules)
 
-    def interactive_menu(self):
+    def interactive_menu(self, verbose=False):
         # Auto-detect first
         detected = ModuleDetector.detect()
         if detected:
             console.print(f"Auto-running tests for [bold cyan]{detected}[/bold cyan]...")
-            return self.run_module(detected)
+            return self.run_module(detected, verbose=verbose)
 
         modules = self.list_modules()
         if not modules:
@@ -255,7 +255,7 @@ class GerminetteRunner:
             if "__pycache__" in dirnames:
                 dirnames.remove("__pycache__")
 
-    def run_module(self, module_name, exercise=None):
+    def run_module(self, module_name, exercise=None, verbose=False):
         """
         Run tests for a subject module.
 
@@ -268,6 +268,7 @@ class GerminetteRunner:
             # Dynamically import the module checker
             mod = importlib.import_module(f"germinette.subjects.{module_name}")
             tester = getattr(mod, "Tester")()
+            tester.verbose = verbose
             tester.run(exercise)
             ge = getattr(tester, "grouped_errors", None)
             if isinstance(ge, dict):
@@ -299,10 +300,84 @@ class GerminetteRunner:
             return None
 
 class BaseTester:
-    def run(self, exercise_name=None):
-        raise NotImplementedError
+    def __init__(self):
+        self.exercises = []
+        self.grouped_errors = {}
+        self.ok_count = 0
+        self.ko_count = 0
+        self.title = ""
 
-    def _run_script(self, path):
+    def record_error(self, exercise_label, error_type, message):
+        """Records an error grouped by exercise label."""
+        if not hasattr(self, 'grouped_errors'):
+            self.grouped_errors = {}
+        if exercise_label not in self.grouped_errors:
+            self.grouped_errors[exercise_label] = []
+        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
+        self.mark_ko()
+
+    def mark_ok(self):
+        self.ok_count = getattr(self, 'ok_count', 0) + 1
+
+    def mark_ko(self):
+        self.ko_count = getattr(self, 'ko_count', 0) + 1
+
+    def display_error_report(self):
+        grouped_errors = getattr(self, 'grouped_errors', {})
+        if grouped_errors:
+            console.print()
+            console.rule("[bold red]Detailed Error Report[/bold red]")
+            console.print()
+            for label, messages in grouped_errors.items():
+                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
+                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
+                console.print()
+        
+        # Display summary statistics
+        ok_count = getattr(self, 'ok_count', 0)
+        ko_count = getattr(self, 'ko_count', 0)
+        total = ok_count + ko_count
+        if total > 0:
+            console.print()
+            console.rule("[bold cyan]Summary[/bold cyan]")
+            console.print(f"[bold]Total checks: {total}[/bold]")
+            console.print(f"[bold green]Passed: {ok_count}[/bold green]")
+            if ko_count > 0:
+                console.print(f"[bold red]Failed: {ko_count}[/bold red]")
+            else:
+                console.print(f"[bold green]✨ All checks passed![/bold green]")
+
+    def run(self, exercise_name=None):
+        title = getattr(self, 'title', "")
+        if title:
+            console.print(title)
+        
+        if os.getcwd() not in sys.path:
+            sys.path.insert(0, os.getcwd())
+
+        exercises = getattr(self, 'exercises', [])
+        if exercise_name:
+            found = False
+            clean_filter = exercise_name.replace(".py", "")
+            for name, func in exercises:
+                if name == clean_filter or name.replace(".py", "") == clean_filter:
+                    func()
+                    found = True
+                    break
+            if not found:
+                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
+                self.record_error(
+                    "Exercise filter",
+                    "Unknown exercise",
+                    f"No exercise matches '{exercise_name}'.",
+                )
+        else:
+            for _, func in exercises:
+                func()
+            
+        self.display_error_report()
+
+    def _run_script(self, path, timeout=10):
         """Runs a python script and returns stdout."""
         import subprocess
         try:
@@ -310,9 +385,12 @@ class BaseTester:
                 [sys.executable, path],
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                timeout=timeout
             )
             return result.stdout
+        except subprocess.TimeoutExpired:
+            return "Error: Script execution timed out after 10 seconds."
         except subprocess.CalledProcessError as e:
             # Return stderr as well for error checking
             return e.stdout + e.stderr
@@ -370,7 +448,7 @@ class BaseTester:
         except Exception as e:
             return f"Error checking docstrings: {e}"
 
-    def check_flake8(self, path):
+    def check_flake8(self, path, timeout=10):
         """Runs flake8 and mypy; returns None only if both pass."""
         import subprocess
         
@@ -378,12 +456,14 @@ class BaseTester:
             flake8_result = subprocess.run(
                 [sys.executable, "-m", "flake8", path],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=timeout
             )
             mypy_result = subprocess.run(
                 [sys.executable, "-m", "mypy", path],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=timeout
             )
 
             if flake8_result.returncode == 0 and mypy_result.returncode == 0:
@@ -593,26 +673,14 @@ class BaseTester:
             
         if err:
             console.print(f"[red]KO (Forbidden Operation)[/red]")
-            # Assuming 'record_error' is available on self (It is in Tester subclass, but BaseTester lacks it?)
-            # BaseTester doesn't have record_error?
-            # Tester subclasses implement record_error.
-            # BaseTester is abstract base.
-            # We should assume self.record_error exists or fallback.
-            # But Python is dynamic. Verify Tester has it. Yes.
-            if hasattr(self, 'record_error'):
-                self.record_error(exercise_label, "Forbidden Operation", file_prefix + err)
-            else:
-                console.print(err)
+            self.record_error(exercise_label, "Forbidden Operation", file_prefix + err)
             return False
 
         # 2. Imports
         err = self.check_imports(path, allowed_imports)
         if err:
             console.print(f"[red]KO (Forbidden Import)[/red]")
-            if hasattr(self, 'record_error'):
-                self.record_error(exercise_label, "Forbidden Import", file_prefix + err)
-            else:
-                console.print(err)
+            self.record_error(exercise_label, "Forbidden Import", file_prefix + err)
             return False
 
         # 3. Try/Except (if required)
@@ -620,20 +688,14 @@ class BaseTester:
             err = self.check_try_except(path, exercise_label)
             if err:
                 console.print(f"[red]KO (Strictness)[/red]")
-                if hasattr(self, 'record_error'):
-                    self.record_error(exercise_label, "Structure Error", file_prefix + err)
-                else:
-                    console.print(err)
+                self.record_error(exercise_label, "Structure Error", file_prefix + err)
                 return False
 
         # 4. Authorized Functions
         err = self.check_authorized_functions(path, allowed_funcs)
         if err:
             console.print(f"[red]KO (Forbidden Function)[/red]")
-            if hasattr(self, 'record_error'):
-                self.record_error(exercise_label, "Authorized Functions", file_prefix + err)
-            else:
-                console.print(err)
+            self.record_error(exercise_label, "Authorized Functions", file_prefix + err)
             return False
         
         return True

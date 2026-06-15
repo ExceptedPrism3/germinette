@@ -172,8 +172,9 @@ def test_module03_ex4_accepts_inventory_system_analysis_header(
             print(f"Item list: {list(inventory.keys())}")
             print(f"Total quantity of the {len(inventory)} items: {total}")
             for name in order:
-                pct = round((inventory[name] / total) * 100, 1) if total else 0.0
-                print(f"Item {name} represents {pct}%")
+                val = float(inventory[name])
+                pct = round((val / float(total)) * 100, 1) if total else 0.0
+                print("Item " + str(name) + " represents " + str(pct) + "%")
 
             if len(order):
                 max_name = order[0]

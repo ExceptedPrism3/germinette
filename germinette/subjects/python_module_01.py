@@ -13,6 +13,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold blue]Testing Module 01: Code Cultivation (v3.0)[/bold blue]"
         self.exercises = [
             ("ft_garden_intro", self.test_garden_intro),
             ("ft_garden_data", self.test_garden_data),
@@ -22,45 +24,6 @@ class Tester(BaseTester):
             ("ft_plant_types", self.test_plant_types),
             ("ft_garden_analytics", self.test_garden_analytics),
         ]
-        self.grouped_errors = {}
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
-
-    def run(self, exercise_name=None):
-        console.print("[bold blue]Testing Module 01: Code Cultivation (v3.0)[/bold blue]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
-        if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name or exercise_name.replace(".py", "") == name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
-        else:
-            for _, func in self.exercises:
-                func()
-        
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
 
     def _load_module(self, module_name, exercise_label):
         cwd = os.getcwd()

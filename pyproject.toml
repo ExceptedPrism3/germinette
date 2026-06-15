@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "germinette"
+dynamic = ["version"]
+description = "Testing tool for 42 Python projects"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "ExceptedPrism3" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "rich",
+    "flake8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[project.scripts]
+germinette = "germinette.__main__:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "germinette.__version__"}

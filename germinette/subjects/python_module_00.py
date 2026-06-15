@@ -13,6 +13,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold blue]Testing Module 00: Growing Code (v3.0)[/bold blue]"
         self.exercises = [
             ("ft_hello_garden", self.test_hello_garden),
             ("ft_garden_name", self.test_garden_name),
@@ -23,7 +25,6 @@ class Tester(BaseTester):
             ("ft_count_harvest", self.test_count_harvest),
             ("ft_seed_inventory", self.test_seed_inventory),
         ]
-        self.grouped_errors = {}
         self.authorized_imports = {
             "ft_hello_garden": set(),
             "ft_garden_name": set(),
@@ -35,47 +36,6 @@ class Tester(BaseTester):
             "ft_count_harvest_recursive": set(),
             "ft_seed_inventory": set(),
         }
-
-    def record_error(self, exercise_label, error_type, message):
-        """Records an error grouped by exercise label."""
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
-
-    def run(self, exercise_name=None):
-        console.print("[bold blue]Testing Module 00: Growing Code (v3.0)[/bold blue]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
-        if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
-        else:
-            for _, func in self.exercises:
-                func()
-        
-        # Display grouped errors
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                # Join multiple errors for the same exercise with a separator
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
 
     def _load_func(self, module_name, exercise_label="Unknown Exercise", func_name=None):
         if not func_name:
@@ -145,7 +105,8 @@ class Tester(BaseTester):
              return None
 
         try:
-            console.print(f"[dim]Debug: Loading {found_path} as {module_name}[/dim]")
+            if getattr(self, 'verbose', False):
+                console.print(f"[dim]Debug: Loading {found_path} as {module_name}[/dim]")
             if not self._check_module_structure(found_path, module_name, exercise_label):
                 return None
 
@@ -175,8 +136,9 @@ class Tester(BaseTester):
             return None
         except AttributeError:
              console.print("[red]KO[/red]")
-             debug_attrs = dir(mod) if 'mod' in locals() else "Module not loaded"
-             console.print(f"[dim]Attributes in module: {debug_attrs}[/dim]")
+             if getattr(self, 'verbose', False):
+                 debug_attrs = dir(mod) if 'mod' in locals() else "Module not loaded"
+                 console.print(f"[dim]Attributes in module: {debug_attrs}[/dim]")
              self.record_error(exercise_label, "Function Missing", f"Could not find function '{func_name}' in {found_path}")
              return None
         except Exception as e:

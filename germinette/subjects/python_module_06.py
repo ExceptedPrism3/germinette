@@ -11,6 +11,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold cyan]Testing Module 06: The Codex (v2.0)[/bold cyan]"
         self.exercises = [
             ("ft_alembic_0", self.test_alembic_0),
             ("ft_alembic_1", self.test_alembic_1),
@@ -26,7 +28,6 @@ class Tester(BaseTester):
             ("ft_kaboom_0", self.test_kaboom_0),
             ("ft_kaboom_1", self.test_kaboom_1),
         ]
-        self.grouped_errors = {}
         self.required_paths = [
             "elements.py",
             "alchemy/__init__.py",
@@ -53,11 +54,6 @@ class Tester(BaseTester):
             "ft_kaboom_0.py",
             "ft_kaboom_1.py",
         ]
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _load_module(self, module_name, exercise_label):
         cwd = os.getcwd()
@@ -94,36 +90,8 @@ class Tester(BaseTester):
         return "FOUND", found_path 
 
     def run(self, exercise_name=None):
-        console.print("[bold cyan]Testing Module 06: The Codex (v2.0)[/bold cyan]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
         self.check_required_structure()
-
-        exercises_to_run = self.exercises
-        if exercise_name:
-            exercises_to_run = [ex for ex in self.exercises if ex[0] == exercise_name]
-            if not exercises_to_run:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
-
-        for _, test_func in exercises_to_run:
-            test_func()
-            
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
-        else:
-            console.print(Panel("[bold green]All tests passed! Module 06 complete.[/bold green]", border_style="green"))
+        super().run(exercise_name)
 
     def check_strict_forbidden(self, path, exercise_label):
         try:

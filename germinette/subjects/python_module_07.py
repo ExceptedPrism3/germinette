@@ -18,6 +18,8 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold cyan]Testing Module 07: DataDeck (Abstract Patterns)[/bold cyan]"
         self.exercises = [
             ("ex00", self.test_creature_factory),
             ("ex0", self.test_creature_factory),
@@ -26,12 +28,6 @@ class Tester(BaseTester):
             ("ex02", self.test_abstract_strategy),
             ("ex2", self.test_abstract_strategy),
         ]
-        self.grouped_errors = {}
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _find_root_dir(self):
         cwd = os.getcwd()
@@ -271,44 +267,18 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Runtime Error", traceback.format_exc())
 
     def run(self, exercise_name=None):
-        console.print("[bold cyan]Testing Module 07: DataDeck (Abstract Patterns)[/bold cyan]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
         root_dir = self._find_root_dir()
-        # The PDF instructions for Mod07 v3.0 say testing code is at root.
         root_init = os.path.join(root_dir, "__init__.py")
         if not os.path.exists(root_init):
              console.print("[yellow]Warning: Missing __init__.py at repository root. This may cause import issues.[/yellow]")
         self._check_mandatory_package_inits(root_dir)
 
         if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
+            super().run(exercise_name)
         else:
             visited = set()
             for name, func in self.exercises:
                 if func not in visited:
                     func()
                     visited.add(func)
-            
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
+            self.display_error_report()
