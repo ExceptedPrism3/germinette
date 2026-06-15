@@ -11,13 +11,14 @@ console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
+        super().__init__()
+        self.title = "[bold cyan]Testing Module 04: Data Archivist (v3.0)[/bold cyan]"
         self.exercises = [
             ("ft_ancient_text", self.test_ancient_text),
             ("ft_archive_creation", self.test_archive_creation),
             ("ft_stream_management", self.test_stream_management),
             ("ft_vault_security", self.test_vault_security),
         ]
-        self.grouped_errors = {}
         self.generated_files = []
         self._setup_test_data()
 
@@ -36,11 +37,6 @@ class Tester(BaseTester):
                     self.generated_files.append(name)
         except Exception as e:
             console.print(f"[red]Warning: Failed to create test data: {e}[/red]")
-
-    def record_error(self, exercise_label, error_type, message):
-        if exercise_label not in self.grouped_errors:
-            self.grouped_errors[exercise_label] = []
-        self.grouped_errors[exercise_label].append(f"[bold]{error_type}[/bold]\n{message}")
 
     def _load_module(self, module_name, exercise_label):
         cwd = os.getcwd()
@@ -96,44 +92,14 @@ class Tester(BaseTester):
         return "FOUND", found_path
 
     def run(self, exercise_name=None):
-        console.print("[bold cyan]Testing Module 04: Data Archivist (v3.0)[/bold cyan]")
-        
-        if os.getcwd() not in sys.path:
-            sys.path.insert(0, os.getcwd())
-
         self._setup_test_data()
-
-        if exercise_name:
-            found = False
-            for name, func in self.exercises:
-                if name == exercise_name:
-                    func()
-                    found = True
-                    break
-            if not found:
-                console.print(f"[red]Unknown exercise: {exercise_name}[/red]")
-                self.record_error(
-                    "Exercise filter",
-                    "Unknown exercise",
-                    f"No exercise matches '{exercise_name}'.",
-                )
-        else:
-            for _, func in self.exercises:
-                func()
-        
-        for f in self.generated_files:
-            try:
-                if os.path.exists(f): os.remove(f)
-            except: pass
-            
-        if self.grouped_errors:
-            console.print()
-            console.rule("[bold red]Detailed Error Report[/bold red]")
-            console.print()
-            for label, messages in self.grouped_errors.items():
-                content = "\n\n[dim]────────────────────────────────[/dim]\n\n".join(messages)
-                console.print(Panel(content, title=f"[bold red]{label}[/bold red]", border_style="red", expand=False))
-                console.print()
+        try:
+            super().run(exercise_name)
+        finally:
+            for f in self.generated_files:
+                try:
+                    if os.path.exists(f): os.remove(f)
+                except: pass
 
     # --- Exercise Tests ---
 
@@ -216,11 +182,15 @@ class Tester(BaseTester):
              pass
 
         # Test 3: File Doesn't Exist
+        # v3.0 alignment update (Issue #17, reported by koldoest26):
+        # Make exception detection robust by performing a case-insensitive check and
+        # matching "no such file" and "error" without colon.
         try:
              cmd = [sys.executable, path, "non_existent_file.txt"]
              result = subprocess.run(cmd, capture_output=True, text=True)
              out = result.stdout + result.stderr
-             if "FileNotFoundError" in out or "Error:" in out or "not found" in out.lower():
+             out_lower = out.lower()
+             if "filenotfounderror" in out_lower or "error" in out_lower or "not found" in out_lower or "no such file" in out_lower:
                   console.print("[green]OK (Missing file handled)[/green]")
              else:
                   console.print("[red]KO (Missing file handled)[/red]")

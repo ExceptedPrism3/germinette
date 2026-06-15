@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.11] - 2026-06-16
+### Fixed
+- **Module 03 Primitive types allowance** (Issue #16, reported by Ketaminepunch): Authorized the standard types `str`, `int`, and `float` globally across all exercises to avoid false positives on standard constructor calls like `float()` or `str()`.
+- **Module 04 False Positive: FileNotFoundError handling** (Issue #17, reported by koldoest26): Made `FileNotFoundError` output checks in Exercise 0 case-insensitive and robust against standard OS-style message variants (e.g., containing "no such file" and "error" without colon).
+- **Core modernization and packaging**: Refactored module checkers into a unified `BaseTester` to reduce duplication, implemented `--verbose` and `--version` CLI flags, established subprocess execution timeouts, modernized packaging with `pyproject.toml`, and configured automated CI workflow checks.
+
 ## [1.8.10] - 2026-05-02
 ### Fixed
 - **Module 09 Cosmic Data (v3.0) Enum resolution**: Checker fixtures now resolve `ContactType` / `Rank` members by subject semantic tokens (case-insensitive match on member **name** or **`.value`**), so idiomatic enums such as `RADIO = "radio"` or `COMMANDER = "commander"` no longer fail before validation with misleading `AttributeError`-style messages.
