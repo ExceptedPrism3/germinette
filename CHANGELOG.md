@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.14] - 2026-07-01
+### Fixed
+- **Ignore mypy internal crashes gracefully** (Issue #19, reported by tirnovantudor8-maker, troubleshooting details by eloiberlinger1): Bypassed checker failures caused by mypy internal errors (e.g. on circular import exercises like `ft_kaboom_1.py` or system setup incompatibilities) while preserving regular type-checking diagnostics.
+
 ## [1.8.13] - 2026-07-01
 ### Fixed
 - **Authorize `__import__` built-in function** (Modules 05, 07, 08): Explicitly allow the standard `__import__` built-in function which was previously filtered out by the `startswith("_")` check on builtin namespaces, resolving false positives on dynamic package validation.

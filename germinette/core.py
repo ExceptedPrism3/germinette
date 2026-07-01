@@ -448,6 +448,7 @@ class BaseTester:
         except Exception as e:
             return f"Error checking docstrings: {e}"
 
+    # Credit to @tirnovantudor8-maker (GitHub Issue #19) and @eloiberlinger1 for reporting and clarifying the mypy internal crash on circular imports!
     def check_flake8(self, path, timeout=10):
         """Runs flake8 and mypy; returns None only if both pass."""
         import subprocess
@@ -466,7 +467,17 @@ class BaseTester:
                 timeout=timeout
             )
 
-            if flake8_result.returncode == 0 and mypy_result.returncode == 0:
+            mypy_lines = (mypy_result.stdout or mypy_result.stderr or "").strip().splitlines()
+            is_mypy_internal_error = any("INTERNAL ERROR" in line for line in mypy_lines)
+            
+            mypy_failed = mypy_result.returncode != 0 and not is_mypy_internal_error
+
+            if is_mypy_internal_error:
+                abs_path = os.path.normpath(os.path.abspath(path))
+                fname = os.path.basename(abs_path)
+                console.print(f"[yellow]Warning: mypy crashed with an internal error while checking {fname}. Ignoring mypy check.[/yellow]")
+
+            if flake8_result.returncode == 0 and not mypy_failed:
                 return None
 
             abs_path = os.path.normpath(os.path.abspath(path))
@@ -499,10 +510,12 @@ class BaseTester:
                         open_hint = f"\n[dim]Or Ctrl+click:[/dim] [bold]{escape(plink)}[/bold]"
                 sections.append(f"[bold]Flake8[/bold]{open_hint}\n{body}")
 
-            if mypy_result.returncode != 0:
-                mypy_lines = (mypy_result.stdout or mypy_result.stderr).strip().splitlines()
+            if mypy_failed:
                 mypy_body = "\n".join(escape(line) for line in mypy_lines) if mypy_lines else "mypy failed with no output."
                 sections.append(f"[bold]mypy[/bold]\n{mypy_body}")
+
+            if not sections:
+                return None
 
             return (
                 f"Style checks — source file: {file_link}"
