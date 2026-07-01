@@ -49,6 +49,7 @@ class Tester(BaseTester):
             n for n in dir(builtins)
             if not n.startswith("_") and n not in {"eval", "exec"}
         ]
+        allowed_funcs.append("__import__")
 
         allowed_imports = ["typing", "abc"]
         if extra_imports:

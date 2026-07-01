@@ -63,6 +63,7 @@ class Tester(BaseTester):
         # Module 08 general instructions authorize all builtins.
         # Keep strict function checks enabled by allowing full builtin namespace.
         allowed_funcs = [name for name in dir(builtins) if not name.startswith("_")]
+        allowed_funcs.append("__import__")
         imports = list(allowed_imports or [])
 
         style_errors = self.check_flake8(path)

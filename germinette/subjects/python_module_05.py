@@ -75,7 +75,9 @@ class Tester(BaseTester):
     # --- Exercise Tests ---
 
     def _all_builtin_functions(self):
-        return [n for n in dir(builtins) if not n.startswith("_")]
+        funcs = [n for n in dir(builtins) if not n.startswith("_")]
+        funcs.append("__import__")
+        return funcs
 
     def test_data_processor(self):
         console.print("\n[bold]Testing Exercise 0: data_processor[/bold]")

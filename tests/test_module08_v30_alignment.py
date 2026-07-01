@@ -80,11 +80,11 @@ def test_module08_ex1_loading_accepts_subject_shape(
             print("Checking dependencies:")
             mods = ["pandas", "numpy", "matplotlib", "requests"]
             for mod in mods:
-                spec = importlib.util.find_spec(mod)
-                if spec is None:
-                    print(f"[MISSING] {mod} - install with pip or Poetry")
-                else:
+                try:
+                    __import__(mod)
                     print(f"[OK] {mod} (installed)")
+                except ImportError:
+                    print(f"[MISSING] {mod} - install with pip or Poetry")
             print("Dataset source: np.random")
             print("Dependency managers compared: pip vs Poetry")
             print("pip install -r requirements.txt")

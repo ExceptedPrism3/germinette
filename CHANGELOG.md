@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.13] - 2026-07-01
+### Fixed
+- **Authorize `__import__` built-in function** (Modules 05, 07, 08): Explicitly allow the standard `__import__` built-in function which was previously filtered out by the `startswith("_")` check on builtin namespaces, resolving false positives on dynamic package validation.
+
 ## [1.8.12] - 2026-06-16
 ### Fixed
 - **Module 07 capabilities variant support** (PR #18, contributed by eloiberlinger1): Supported alternative expected output strings ("morphs into" and "stabilizes its form" as alternatives to "revert") in Exercise 1 Capacitor checks, handling different versions of the subject PDF.
