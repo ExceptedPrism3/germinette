@@ -150,7 +150,14 @@ class Tester(BaseTester):
                 continue
 
             assigned = set()
-            used = []
+            for item in cls.body:
+                if isinstance(item, ast.Assign):
+                    for target in item.targets:
+                        if isinstance(target, ast.Name):
+                            assigned.add(target.id)
+                elif isinstance(item, ast.AnnAssign):
+                    if isinstance(item.target, ast.Name):
+                        assigned.add(item.target.id)
 
             for n in ast.walk(cls):
                 if not isinstance(n, ast.Attribute):
@@ -159,7 +166,19 @@ class Tester(BaseTester):
                     continue
                 if isinstance(n.ctx, ast.Store):
                     assigned.add(n.attr)
-                elif isinstance(n.ctx, ast.Load):
+
+            # Also collect external attribute assignments across the entire module AST (e.g. p.name = ...)
+            for n in ast.walk(tree):
+                if isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Store):
+                    assigned.add(n.attr)
+
+            used = []
+            for n in ast.walk(cls):
+                if not isinstance(n, ast.Attribute):
+                    continue
+                if not isinstance(n.value, ast.Name) or n.value.id != "self":
+                    continue
+                if isinstance(n.ctx, ast.Load):
                     used.append((n.attr, n.lineno))
 
             for attr, lineno in used:
@@ -217,6 +236,7 @@ class Tester(BaseTester):
             console.print("[red]KO[/red]")
             self.record_error(label, "Execution Error", str(e))
 
+    # Credit to @zoeleu (GitHub Issue #20) for reporting unparameterized Plant class construction support in Ex1/Ex2!
     def test_garden_data(self):
         console.print("\n[bold]Testing Exercise 1: ft_garden_data[/bold]")
         label = "Exercise 1"
@@ -232,8 +252,16 @@ class Tester(BaseTester):
             Plant = mod.Plant
 
             # v3.0: Plant class must have show() method.
-            p = Plant("Test", 10, 5)
-            if not hasattr(p, 'show'):
+            # Support both parameterized and unparameterized Plant instantiation
+            try:
+                p = Plant("Test", 10, 5)
+            except TypeError:
+                try:
+                    p = Plant()
+                except TypeError:
+                    p = Plant.__new__(Plant)
+
+            if not hasattr(p, 'show') and not hasattr(Plant, 'show'):
                 self.record_error(label, "Missing Method",
                                   "Plant class must have a 'show()' method.\n"
                                   "The subject requires show() to display plant information.")
@@ -276,15 +304,27 @@ class Tester(BaseTester):
                 console.print("[red]KO[/red]")
                 return
 
-            p = Plant("Bamboo", 100, 10)
+            try:
+                p = Plant("Bamboo", 100, 10)
+            except TypeError:
+                try:
+                    p = Plant()
+                    p.name = "Bamboo"
+                    p.height = 100
+                    p.age = 10
+                except TypeError:
+                    p = Plant.__new__(Plant)
+                    p.name = "Bamboo"
+                    p.height = 100
+                    p.age = 10
             
             # v3.0: requires grow() and age() methods; show() instead of get_info()
             missing = []
-            if not hasattr(p, 'grow'): missing.append('grow')
-            if not hasattr(p, 'age'): missing.append('age')
-            if not hasattr(p, 'show'):
+            if not hasattr(p, 'grow') and not hasattr(Plant, 'grow'): missing.append('grow')
+            if not hasattr(p, 'age') and not hasattr(Plant, 'age'): missing.append('age')
+            if not hasattr(p, 'show') and not hasattr(Plant, 'show'):
                 # Accept get_info as fallback for backwards compat
-                if not hasattr(p, 'get_info'):
+                if not hasattr(p, 'get_info') and not hasattr(Plant, 'get_info'):
                     missing.append('show (or get_info)')
 
             if missing:

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.15] - 2026-08-26
+### Fixed
+- **Module 01: Support unparameterized Plant class construction** (Issue #20, reported by zoeleu): In Module 01 Exercises 1 and 2, allowed `Plant` class instantiation with or without constructor arguments to match the subject specification where attributes are assigned after instantiation, and updated static sanity checks to avoid false positives on class/external attribute assignments.
+
 ## [1.8.14] - 2026-07-01
 ### Fixed
 - **Ignore mypy internal crashes gracefully** (Issue #19, reported by tirnovantudor8-maker, troubleshooting details by eloiberlinger1): Bypassed checker failures caused by mypy internal errors (e.g. on circular import exercises like `ft_kaboom_1.py` or system setup incompatibilities) while preserving regular type-checking diagnostics.
