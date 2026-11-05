@@ -1,47 +1,50 @@
-"""Strategies."""
+"""Strategies dispatch on capabilities and reject unsuitable creatures."""
 
-import abc
+from abc import ABC, abstractmethod
+from ex0.creatures import Creature
+from ex1.capabilities import HealCapability, TransformCapability
 
 
-class BattleStrategy(abc.ABC):
-    """Strategy abstract."""
+class InvalidStrategyError(Exception):
+    pass
 
-    @abc.abstractmethod
-    def act(self) -> None:
-        """Act."""
+
+class BattleStrategy(ABC):
+    @abstractmethod
+    def act(self, creature: Creature) -> None:
         pass
 
-    @abc.abstractmethod
-    def is_valid(self) -> bool:
-        """Validate."""
+    @abstractmethod
+    def is_valid(self, creature: Creature) -> bool:
         pass
 
 
 class NormalStrategy(BattleStrategy):
-    """Normal Strategy."""
+    def act(self, creature: Creature) -> None:
+        print(creature.attack())
 
-    def act(self) -> None:
-        pass
-
-    def is_valid(self) -> bool:
+    def is_valid(self, creature: Creature) -> bool:
         return True
 
 
 class AggressiveStrategy(BattleStrategy):
-    """Aggresive Strategy."""
+    def is_valid(self, creature: Creature) -> bool:
+        return isinstance(creature, TransformCapability)
 
-    def act(self) -> None:
-        pass
-
-    def is_valid(self) -> bool:
-        return True
+    def act(self, creature: Creature) -> None:
+        if not isinstance(creature, TransformCapability):
+            raise InvalidStrategyError('Invalid aggressive strategy')
+        print(creature.transform())
+        print(creature.attack())
+        print(creature.revert())
 
 
 class DefensiveStrategy(BattleStrategy):
-    """Defensive Strategy."""
+    def is_valid(self, creature: Creature) -> bool:
+        return isinstance(creature, HealCapability)
 
-    def act(self) -> None:
-        pass
-
-    def is_valid(self) -> bool:
-        return True
+    def act(self, creature: Creature) -> None:
+        if not isinstance(creature, HealCapability):
+            raise InvalidStrategyError('Invalid defensive strategy')
+        print(creature.attack())
+        print(creature.heal())

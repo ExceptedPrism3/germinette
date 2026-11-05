@@ -11,7 +11,6 @@
     - **Logic**: Runs multiple test cases (standard inputs, edge cases, type checks).
     - **Style (New)**: Enforces `flake8` compliance. If style fails, testing stops immediately ("Single KO Policy") to prevent confusion.
     - **Execution**: Verifies that your scripts run exactly as shown in the subject PDF examples.
-    - **Docstrings**: Enforces docstrings on all classes and methods (Strict policy for Module 01).
 - **Maintenance**:
     - **Auto-Cleanup**: Automatically wipes `__pycache__` directories after every run to keep your workspace pristine.
 - **Detailed Error Reporting**: 
@@ -27,7 +26,7 @@
 | Module | Status | Features |
 | :--- | :--- | :--- |
 | **Module 00** | 🟢 Ready | Basic Python, Functions, I/O |
-| **Module 01** | 🟢 Ready | Classes, Objects, Strict Docstrings |
+| **Module 01** | 🟢 Ready | Classes, Objects, Type Hints |
 | **Module 02** | 🟢 Ready | Error Handling, Custom Exceptions |
 | **Module 03** | 🟢 Ready | `sys.argv`, Data Structures, Generators |
 | **Module 04** | 🟢 Ready | File Manipulation, Context Managers, Stdin/out |
@@ -223,7 +222,9 @@ After each run, the CLI prints a **Disclaimer** panel, then a **version** line a
 ## 42TUI bis subjects
 
 The `python_module_05_bis` and `python_module_06_bis` checkers target the
-version 1.0 subjects. Run them explicitly, for example:
+version 1.0 subjects. The attached Codex PDF is version 1.0, not 3.1.
+Codex bis is also detected from its distinctive file layout. Run either checker
+explicitly when needed:
 
 ```sh
 germinette python_module_05_bis --report result.json
@@ -238,14 +239,54 @@ the tester environment. Module 05 bis creates temporary project copies for its
 virtual-environment and configuration probes. Other checks execute project code
 and scripts; run them only in a trusted project or an isolated environment.
 
-The checkers cover file structure, style, selected forbidden operations and
-selected runtime behaviors, including factory and strategy behavior. If a
-constructor needs arguments the tester cannot infer, that behavior check is
-skipped and requires manual review. They do not cover every subject requirement,
-and mypy is not run by the bis checkers because both subjects include intentional
-type errors. A passing report describes only the checks listed in it. Review the
-official subject and perform the peer evaluation as well.
+Codex bis checks all five exercises: authorized imports, ordinary aliases of
+forbidden operations, flake8, annotated definitions and mypy, dependency-file
+syntax and matching constraints, real reagent imports and versions, missing
+reagents, dotenv loading and environment precedence, actual demonstration calls,
+element/potion/recipe results, package exports, light validation, and the genuine
+dark circular import. The deliberate hidden-earth mypy error is exempted; other
+type errors are reported. The dark functions are additionally checked in a
+subprocess with their mutual imports deferred, without editing the submission.
+Caught and uncaught teaching exceptions are both accepted.
+
+Install the declared reagents in the tester environment for the installed-version
+and single-missing-reagent probes. Versions must satisfy the student's
+requirements; otherwise that probe is skipped. Maintainers can install everything
+needed by the full regression suite with `python3 -m pip install -e ".[dev]"`.
+The checker parses pip/Poetry declarations but does not install student dependencies
+or run Poetry. Direct URL dependency sources require manual review and produce a
+skip. Git is required to verify ignore rules and exclude tracked `.env` files and
+virtual environments; local unsubmitted development files are allowed. A non-Git
+project receives a skipped submission check.
+
+Nexus bis checks annotated definitions, mypy, processor validation/FIFO behavior,
+polymorphic routing, Protocol exports, factory products, persistent transformations,
+strategy order and executed demonstrations. Only the guarded invalid-ingestion
+demonstration is exempted from mypy. Factory/strategy constructors requiring
+arguments the tester cannot infer are reported for manual review.
+
+These checks execute student code and are not a security sandbox. Dynamic name
+construction and genuinely secret values still require human review. A passing
+report describes the checks listed in it; peer evaluation must establish the
+student's understanding of environments, imports, exports, and cycle repair.
+
+The original findings and remediation mapping are in [SUBJECT_AUDIT.md](SUBJECT_AUDIT.md).
+The complete Codex reference submission is under `tests/fixtures/codex_golden/`.
 
 For other modules and A-Maze-ing, JSON reports contain recorded failures and
 mark outcome accounting incomplete: the legacy checkers do not reliably record
 all passes or errors, so a clean run remains unverified.
+
+
+## Supplied subject versions
+
+The nine local PDFs were reviewed together. The checker labels now match Module
+01 **v3.2**, Modules 03/05 **v3.1**, Modules 00/02/04/07 **v3.0**, and both bis
+subjects **v1.0**. [PDF_ALIGNMENT.md](PDF_ALIGNMENT.md) records the mapping,
+corrections and remaining manual-review boundaries. Modules without a supplied
+PDF retain their existing behavior pending those documents.
+
+Module 04's file probes use temporary directories and never supply system files
+as write destinations. Its vault check accepts either string or integer action
+flags as the subject permits. DataDeck allows alternative creature names and
+checks actual method calls as well as factory/capability/strategy behavior.

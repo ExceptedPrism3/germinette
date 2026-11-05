@@ -1,11 +1,9 @@
-# Module 07 (DataDeck) golden reference
+# Module 07 (DataDeck v3.0) reference
 
-Minimal **ex0–ex4** tree used by `tests/test_integration_module07.py` to verify that
-`germinette/subjects/python_module_07.py` still passes a known-good project (flake8,
-type hints, `verify_strict`, and expected stdout).
+The three packages `ex0/`, `ex1/`, `ex2/` and the root scripts `battle.py`,
+`capacitor.py`, `tournament.py` implement the supplied PDF's factory, capability
+and strategy contracts. Transformations change persistent state; invalid
+strategies raise a dedicated exception; each tournament pairs opponents once.
 
-- Run from repo root: `python -m pytest tests/test_integration_module07.py -v`
-- Same layout students use: repo root `__init__.py`, then `ex0/` … `ex4/` with
-  `main.py` runnable as `python3 -m exN.main`.
-
-This is **not** an official 42 solution—only a regression harness for the tester.
+Run `python -m pytest tests/test_integration_module07.py -v` from the repository
+root. This is a regression reference, not an official 42 solution.

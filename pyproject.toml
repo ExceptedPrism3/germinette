@@ -21,11 +21,16 @@ dependencies = [
     "flake8",
     "mypy",
     "python-dotenv",
+    "packaging>=26.3",
+    "tomli; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
+    "pydantic>=2,<3",
+    "pandas",
+    "numpy",
 ]
 
 [project.scripts]

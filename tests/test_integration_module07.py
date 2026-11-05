@@ -28,7 +28,7 @@ def golden_cwd(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_module_07_golden_full_run_no_errors(golden_cwd: None) -> None:
-    """Golden ex0–ex4 must pass flake8, type hints, strict checks, and output."""
+    """Golden ex0–ex2 must pass flake8, type hints, strict checks, and output."""
     from germinette.subjects.python_module_07 import Tester
 
     tester = Tester()

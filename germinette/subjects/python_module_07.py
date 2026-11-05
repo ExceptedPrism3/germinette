@@ -13,6 +13,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
+from germinette.subjects.combat_checks import FACTORIES, STRATEGIES, DEMONSTRATION
 
 console = Console()
 
@@ -144,9 +145,11 @@ class Tester(BaseTester):
         if not os.path.exists(ex_dir):
             self.record_error(label, "Missing Directory", f"Missing required directory: {ex_name}/")
             return False
-        for fname in os.listdir(ex_dir):
-            if fname.endswith(".py"):
-                path = os.path.join(ex_dir, fname)
+        if not os.path.isfile(os.path.join(ex_dir, "__init__.py")):
+            self.record_error(label, "Missing Package Files", f"Missing {ex_name}/__init__.py")
+            return False
+        for path in Path(ex_dir).rglob("*.py"):
+            if path.is_file():
                 if not self.common_strict_check(path, label, extra_imports=["ex0", "ex1", "ex2"]):
                     return False
         return True
@@ -165,17 +168,26 @@ class Tester(BaseTester):
         if not self.common_strict_check(script_path, exercise_label, extra_imports=["ex0", "ex1", "ex2"]): return
         if not self._check_ex_directory(root_dir, "ex0", exercise_label): return
 
+        if not self.check_behavior(exercise_label, "PACKAGES = ['ex0']; PACKAGE = 'ex0'; CAPABILITIES = False; HEALING = False\n" + FACTORIES, cwd=root_dir, can_skip=True):
+            return
+
+        if not self.check_behavior(
+            exercise_label,
+            "SCRIPT = 'battle.py'; REQUIRED = {'create_base': 4, 'create_evolved': 2, 'describe': 6, 'attack': 6}\n" + DEMONSTRATION,
+            cwd=root_dir,
+        ):
+            return
+
         try:
             cmd = [sys.executable, "battle.py"]
-            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True, timeout=15)
             out = result.stdout + result.stderr
+            if result.returncode:
+                self.record_error(exercise_label, "Runtime Error", out)
+                return
             if self.check_for_crash(out, exercise_label): return
 
-            required = [
-                "Flameling", "Pyrodon", "Aquabub", "Torragon",
-                "Fire type", "Water type",
-                "factory", "battle"
-            ]
+            required = ["factory", "battle"]
 
             missing = [r for r in required if r.lower() not in out.lower()]
             if not missing:
@@ -196,31 +208,33 @@ class Tester(BaseTester):
         
         if not os.path.exists(script_path):
              console.print("[red]KO (Missing File)[/red]")
+             self.record_error(exercise_label, "Missing File", f"Missing {os.path.basename(script_path)} at root.")
              return
             
         if not self.common_strict_check(script_path, exercise_label, extra_imports=["ex0", "ex1", "ex2"]): return
         if not self._check_ex_directory(root_dir, "ex1", exercise_label): return
 
+        if not self.check_behavior(exercise_label, "PACKAGES = ['ex0', 'ex1']; PACKAGE = 'ex1'; CAPABILITIES = True; HEALING = True\n" + FACTORIES, cwd=root_dir, can_skip=True):
+            return
+
+        if not self.check_behavior(
+            exercise_label,
+            "SCRIPT = 'capacitor.py'; REQUIRED = {'create_base': 2, 'create_evolved': 2, 'describe': 4, 'attack': 6, 'heal': 2, 'transform': 2, 'revert': 2}\n" + DEMONSTRATION,
+            cwd=root_dir,
+        ):
+            return
+
         try:
             cmd = [sys.executable, "capacitor.py"]
-            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True, timeout=15)
             out = result.stdout + result.stderr
+            if result.returncode:
+                self.record_error(exercise_label, "Runtime Error", out)
+                return
             if self.check_for_crash(out, exercise_label): return
 
-            required = [
-                "Sproutling", "Grass type",
-                "Bloomelle", "heal",
-                "Shiftling", "Normal type",
-                "Morphagon", "transform"
-            ]
-
-            # v3.0 alignment update (PR #18, contributed by eloiberlinger1):
-            # Support alternative expected outputs ("revert" OR both "morphs into" and "stabilizes its form")
-            # to handle different subject PDF wording.
-            missing = [r for r in required if r.lower() not in out.lower()]
-            out_lower = out.lower()
-            if "revert" not in out_lower and not ("morphs into" in out_lower and "stabilizes its form" in out_lower):
-                 missing.append("revert OR (morphs into AND stabilizes its form)")
+            required = ["heal", "transform"]
+            missing = [word for word in required if word not in out.lower()]
 
             if not missing:
                 console.print("[green]OK[/green]")
@@ -240,15 +254,29 @@ class Tester(BaseTester):
         
         if not os.path.exists(script_path):
              console.print("[red]KO (Missing File)[/red]")
+             self.record_error(exercise_label, "Missing File", f"Missing {os.path.basename(script_path)} at root.")
              return
             
         if not self.common_strict_check(script_path, exercise_label, extra_imports=["ex0", "ex1", "ex2"]): return
         if not self._check_ex_directory(root_dir, "ex2", exercise_label): return
 
+        if not self.check_behavior(exercise_label, "PACKAGES = ['ex0', 'ex1', 'ex2']; STRATEGY_PACKAGE = 'ex2'; HEALING = True\n" + STRATEGIES, cwd=root_dir, can_skip=True):
+            return
+
+        if not self.check_behavior(
+            exercise_label,
+            "SCRIPT = 'tournament.py'; REQUIRED = {'create_base': 2, 'act': 2, 'attack': 1}\n" + DEMONSTRATION,
+            cwd=root_dir,
+        ):
+            return
+
         try:
             cmd = [sys.executable, "tournament.py"]
-            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+            result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True, timeout=15)
             out = result.stdout + result.stderr
+            if result.returncode:
+                self.record_error(exercise_label, "Runtime Error", out)
+                return
             if self.check_for_crash(out, exercise_label): return
 
             required = [
@@ -275,9 +303,6 @@ class Tester(BaseTester):
 
     def run(self, exercise_name=None):
         root_dir = self._find_root_dir()
-        root_init = os.path.join(root_dir, "__init__.py")
-        if not os.path.exists(root_init):
-             console.print("[yellow]Warning: Missing __init__.py at repository root. This may cause import issues.[/yellow]")
         self._check_mandatory_package_inits(root_dir)
 
         if exercise_name:

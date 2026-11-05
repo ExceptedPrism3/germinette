@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **Supplied PDF alignment**: Review all nine local PDFs; update Module 01 to v3.2
+  and Modules 03/05 to v3.1. Correct Module 02/05 and Nexus bis detection.
+- **Behavior checks**: Enforce recursion, seed annotations, plant validation and
+  analytics, raised exceptions, mixed-score processing, coordinates and generators.
+  Share real processor/FIFO/export and factory/capability/strategy contracts across
+  the corresponding subjects, with working references and negative regressions.
+- **File probes**: Use temporary paths instead of system files or fixed project
+  filenames, validate full payloads, and accept integer vault action flags.
+- **Teaching examples**: Exempt only the expected mypy diagnostic lines and verify
+  that battle/capability/strategy demonstrations actually execute their methods.
+- **Codex bis v1.0**: Align all five exercise groups with the attached PDF, including
+  type/import policies, dependency declarations and runtime versions, dotenv
+  precedence, executed demonstrations, composed recipes, light validation and the
+  deliberately broken dark import cycle. Accept caught teaching exceptions and
+  valid alternative configuration/output forms.
+- **Detection and submission checks**: Detect Codex bis separately from Module 08,
+  honor Git ignore semantics, and reject tracked `.env` files and virtual environments.
+- **Regression coverage**: Add a complete Codex fixture and negative/positive audit
+  cases; declare Pydantic and reagent dependencies needed by the development suite.
+
 ## [1.8.15] - 2026-08-26
 ### Fixed
 - **Module 01: Support unparameterized Plant class construction** (Issue #20, reported by zoeleu): In Module 01 Exercises 1 and 2, allowed `Plant` class instantiation with or without constructor arguments to match the subject specification where attributes are assigned after instantiation, and updated static sanity checks to avoid false positives on class/external attribute assignments.

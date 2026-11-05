@@ -1,31 +1,23 @@
-"""Capacitor testing."""
+"""Demonstrate healing and persistent transformation."""
 
-from ex1.factories import HealingCreatureFactory, TransformCreatureFactory
-
-
-def test_capacitor() -> None:
-    """Test capacitor."""
-    print("Testing Creature with healing capability")
-    print("Sproutling is a Grass type Creature")
-    print("Sproutling heals itself")
-
-    print("Bloomelle is a Grass type Creature")
-    print("Bloomelle heal")
-
-    print("Testing Creature with transform capability")
-    print("Shiftling is a Normal type Creature")
-    print("Shiftling uses transform to shift into form")
-    print("Shiftling returns to normal")
-
-    print("Morphagon is a Normal type Creature")
-    print("Morphagon morphs into form")
-    print("Morphagon returns to normal")
-    print("revert")
+from ex1 import HealingCreatureFactory, TransformCreatureFactory
+from ex1.capabilities import HealCapability, TransformCapability
 
 
-if __name__ == "__main__":
-    test_capacitor()
+def main() -> None:
+    print('Testing healing capability')
+    healing = HealingCreatureFactory()
+    for entity in (healing.create_base(), healing.create_evolved()):
+        print(entity.describe(), entity.attack())
+        if isinstance(entity, HealCapability):
+            print(entity.heal())
+    print('Testing transform capability')
+    transform = TransformCreatureFactory()
+    for entity in (transform.create_base(), transform.create_evolved()):
+        print(entity.describe(), entity.attack())
+        if isinstance(entity, TransformCapability):
+            print(entity.transform(), entity.attack(), entity.revert())
 
-    # Use the factories
-    HealingCreatureFactory()
-    TransformCreatureFactory()
+
+if __name__ == '__main__':
+    main()

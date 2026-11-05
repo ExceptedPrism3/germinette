@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 import importlib.util
 import inspect
+import typing
 import sys
 import os
 import ast
@@ -75,10 +76,8 @@ class Tester(BaseTester):
             pass # Could not parse exercise number
 
         # Search for file
-        search_paths = [base_dir]
-        if expected_dir:
-            search_paths.append(expected_dir)
-        else:
+        search_paths = [expected_dir] if expected_dir else [base_dir]
+        if not expected_dir:
              # Fallback to scanning all if parsing failed
              for i in range(10):
                 ex_path = os.path.join(base_dir, f"ex{i}")
@@ -169,18 +168,11 @@ class Tester(BaseTester):
 
         for node in tree.body:
             if isinstance(node, ast.If):
-                # Forbid `if __name__ == "__main__":`
-                if (
-                    isinstance(node.test, ast.Compare)
-                    and isinstance(node.test.left, ast.Name)
-                    and node.test.left.id == "__name__"
-                ):
-                    self.record_error(
-                        exercise_label,
-                        "Structure Error",
-                        "Do not include a __main__ block; submit only functions.",
-                    )
-                    return False
+                self.record_error(
+                    exercise_label, "Structure Error",
+                    "Do not include a __main__ block or top-level conditionals; submit only functions.",
+                )
+                return False
             elif isinstance(node, ast.Import):
                 imported = {alias.name.split(".")[0] for alias in node.names}
                 allowed = self.authorized_imports.get(expected_function, set())
@@ -203,7 +195,7 @@ class Tester(BaseTester):
                     return False
             elif isinstance(node, ast.FunctionDef):
                 if node.name not in allowed_func_names:
-                    if not (is_recursive_ex6 and node.name.startswith("_")):
+                    if not is_recursive_ex6:
                         self.record_error(
                             exercise_label,
                             "Structure Error",
@@ -226,6 +218,22 @@ class Tester(BaseTester):
                     "Top-level statements are not allowed; submit function definitions only.",
                 )
                 return False
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                self.record_error(exercise_label, "Forbidden Import", "Imports are not authorized in Module 00.")
+                return False
+        allowed = {
+            "ft_hello_garden": ["print"],
+            "ft_garden_name": ["input", "print"],
+            "ft_seed_inventory": ["print"],
+        }.get(expected_function, ["input", "int", "print"])
+        if expected_function.startswith("ft_count_harvest"):
+            allowed = [*allowed, "range"]
+        violation = self.check_authorized_functions(path, allowed)
+        if violation:
+            self.record_error(exercise_label, "Authorized Functions", violation)
+            return False
 
         if expected_function not in {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}:
             self.record_error(
@@ -271,7 +279,7 @@ class Tester(BaseTester):
         for garden_name, expected in test_cases:
             try:
                 output = IOTester.run_function(func, inputs=[garden_name])
-                if f"Garden: {garden_name}" in output and "Status: Growing well!" in output:
+                if output.strip() == expected:
                     console.print(f"[green]OK ({garden_name})[/green]")
                 else:
                     console.print(f"[red]KO ({garden_name})[/red]")
@@ -304,7 +312,7 @@ class Tester(BaseTester):
         for inputs, expected_part in test_cases:
             try:
                 output = IOTester.run_function(func, inputs=inputs)
-                if expected_part in output:
+                if f"Plot area: {expected_part}" in output.splitlines():
                     console.print(f"[green]OK ({inputs[0]}x{inputs[1]}={expected_part})[/green]")
                 else:
                     console.print(f"[red]KO ({inputs[0]}x{inputs[1]}={expected_part})[/red]")
@@ -329,7 +337,7 @@ class Tester(BaseTester):
         for inputs, expected_sum in test_cases:
             try:
                 output = IOTester.run_function(func, inputs=inputs)
-                if f"Total harvest: {expected_sum}" in output or expected_sum in output:
+                if f"Total harvest: {expected_sum}" in output.splitlines():
                      console.print(f"[green]OK ({'+'.join(inputs)}={expected_sum})[/green]")
                 else:
                      console.print(f"[red]KO ({'+'.join(inputs)}={expected_sum})[/red]")
@@ -414,7 +422,7 @@ class Tester(BaseTester):
                         if line not in out:
                             missing.append(line)
                     
-                    if not missing:
+                    if not missing and out.strip().splitlines() == expected_lines:
                         console.print(f"[green]Iterative OK ({inp} days)[/green]")
                     else:
                         console.print(f"[red]Iterative KO ({inp} days)[/red]")
@@ -425,6 +433,30 @@ class Tester(BaseTester):
 
         func2 = self._load_func("ft_count_harvest_recursive", exercise_label)
         if func2:
+            active = {}
+            recursed = False
+            def profile(frame, event, arg):
+                nonlocal recursed
+                code = frame.f_code
+                if code.co_filename != func2.__code__.co_filename:
+                    return
+                if event == "call":
+                    recursed = recursed or active.get(code, 0) > 0
+                    active[code] = active.get(code, 0) + 1
+                elif event == "return":
+                    active[code] = active.get(code, 0) - 1
+            previous = sys.getprofile()
+            try:
+                sys.setprofile(profile)
+                IOTester.run_function(func2, inputs=["3"])
+            except Exception as exc:
+                self.record_error(exercise_label, "Recursive Error", str(exc))
+                return
+            finally:
+                sys.setprofile(previous)
+            if not recursed:
+                self.record_error(exercise_label, "Missing Recursion", "The recursive version must actually use recursion.")
+                return
             cases = ["3", "1", "0", "4"]
             for inp in cases:
                 try:
@@ -438,7 +470,7 @@ class Tester(BaseTester):
                         if line not in out:
                             missing.append(line)
                             
-                    if not missing:
+                    if not missing and out.strip().splitlines() == expected_lines:
                         console.print(f"[green]Recursive OK ({inp} days)[/green]")
                     else:
                         console.print(f"[red]Recursive KO ({inp} days)[/red]")
@@ -457,10 +489,11 @@ class Tester(BaseTester):
         # Check Signature (Strict Type Hints)
         try:
             sig = inspect.signature(func)
+            hints = typing.get_type_hints(func)
             params = list(sig.parameters.items())
             
             # Expected: (seed_type: str, quantity: int, unit: str) -> None
-            if len(params) != 3:
+            if len(params) != 3 or list(sig.parameters) != ["seed_type", "quantity", "unit"]:
                 console.print(f"[red]KO (Signature Mismatch)[/red]")
                 self.record_error(exercise_label, "Signature Error", f"Expected 3 parameters, got {len(params)}.")
                 return
@@ -469,23 +502,22 @@ class Tester(BaseTester):
             p2_name, p2 = params[1]
             p3_name, p3 = params[2]
 
-            if p1.annotation != str:
+            if hints.get(p1_name) is not str:
                 console.print(f"[red]KO (Type Hint Error)[/red]")
                 self.record_error(exercise_label, "Type Hint Error", f"Parameter '{p1_name}': Expected str, got {p1.annotation}")
                 return
-            if p2.annotation != int:
+            if hints.get(p2_name) is not int:
                 console.print(f"[red]KO (Type Hint Error)[/red]")
                 self.record_error(exercise_label, "Type Hint Error", f"Parameter '{p2_name}': Expected int, got {p2.annotation}")
                 return
-            if p3.annotation != str:
+            if hints.get(p3_name) is not str:
                 console.print(f"[red]KO (Type Hint Error)[/red]")
                 self.record_error(exercise_label, "Type Hint Error", f"Parameter '{p3_name}': Expected str, got {p3.annotation}")
                 return
             
-            if sig.return_annotation is not None and sig.return_annotation != None: # 'None' type
-                # in python 3.10 match NoneType or strict None.
-                # Just check string repr or strict.
-                pass 
+            if hints.get("return") is not type(None):
+                self.record_error(exercise_label, "Type Hint Error", "Expected return annotation -> None.")
+                return
 
         except Exception as e:
              console.print(f"[red]KO (Signature Check Failed)[/red]")

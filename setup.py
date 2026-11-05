@@ -22,10 +22,15 @@ setup(
         "flake8", # Linter
         "mypy",
         "python-dotenv",
+        "packaging>=26.3",
+        "tomli; python_version < '3.11'",
     ],
     extras_require={
         "dev": [
             "pytest>=8",
+            "pydantic>=2,<3",
+            "pandas",
+            "numpy",
         ],
     },
     python_requires=">=3.10",

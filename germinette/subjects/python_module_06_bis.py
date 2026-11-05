@@ -4,6 +4,17 @@ import ast
 from pathlib import Path
 
 from germinette.subjects.bis_common import BisTester
+from germinette.subjects.combat_checks import (
+    FACTORIES,
+    STRATEGIES,
+    DEMONSTRATION,
+)
+from germinette.subjects.nexus_checks import (
+    PROCESSORS,
+    STREAM,
+    PIPELINE,
+    intentional_ingest_errors,
+)
 
 
 class Tester(BisTester):
@@ -19,6 +30,22 @@ class Tester(BisTester):
             ("ex3", self.factories),
             ("ex4", self.strategies),
         ]
+
+    def lint(self, name, paths):
+        errors = []
+        for path in paths:
+            tree = self.tree(path)
+            if tree is None:
+                continue
+            expected = (
+                intentional_ingest_errors(tree)
+                if str(path) == "data_processor.py"
+                else []
+            )
+            style = self.check_flake8(str(path), expected_mypy_errors=expected)
+            hints = self.check_type_hints(path)
+            errors.extend(error for error in (style, hints) if error)
+        self.check(name + " and types", not errors, "\n".join(errors))
 
     def classes(self, path, required):
         tree = self.tree(path)
@@ -50,7 +77,11 @@ class Tester(BisTester):
         path = "data_processor.py"
         if self.files("Exercise 0 files", [path]):
             self.lint(f"{path}: flake8", [path])
-            self.policy(f"{path}: forbidden operations", [path])
+            self.policy(
+                f"{path}: forbidden operations",
+                [path],
+                allowed_imports={"abc", "typing", "__future__"},
+            )
             self.classes(
                 path,
                 {
@@ -63,39 +94,23 @@ class Tester(BisTester):
             self.script(path)
             self.probe(
                 "Processor validation and FIFO",
-                """
-from data_processor import NumericProcessor, TextProcessor, LogProcessor
-for cls, valid, invalid in ((NumericProcessor, [1, 2.5], "text"),
-                            (TextProcessor, ["one", "two"], 42),
-                            (LogProcessor, [{"log_level": "INFO",
-                                             "log_message": "ok"}], 42)):
-    processor = cls()
-    assert processor.validate(valid) is True
-    assert processor.validate(invalid) is False
-    try:
-        processor.ingest(invalid)
-    except Exception:
-        pass
-    else:
-        raise AssertionError("Invalid ingestion must raise an exception")
-    processor.ingest(valid)
-    result = processor.output()
-    assert isinstance(result, tuple) and len(result) == 2
-    assert isinstance(result[0], int) and isinstance(result[1], str)
-    if cls is NumericProcessor:
-        assert result[1] == "1"
-        assert processor.output()[1] == "2.5"
-    if cls is TextProcessor:
-        assert result[1] == "one"
-        assert processor.output()[1] == "two"
-""",
+                (
+                    "from data_processor import (DataProcessor, "
+                    "NumericProcessor, "
+                    "TextProcessor, LogProcessor)\n"
+                )
+                + PROCESSORS,
             )
 
     def stream(self):
         path = "data_stream.py"
         if self.files("Exercise 1 files", [path]):
             self.lint(f"{path}: flake8", [path])
-            self.policy(f"{path}: forbidden operations", [path])
+            self.policy(
+                f"{path}: forbidden operations",
+                [path],
+                allowed_imports={"abc", "typing", "__future__"},
+            )
             self.classes(
                 path,
                 {
@@ -109,27 +124,22 @@ for cls, valid, invalid in ((NumericProcessor, [1, 2.5], "text"),
             self.script(path)
             self.probe(
                 "Stream routing",
-                """
-from data_stream import (DataStream, NumericProcessor, TextProcessor,
-                         LogProcessor)
-stream = DataStream()
-numeric, text, logs = NumericProcessor(), TextProcessor(), LogProcessor()
-for processor in (numeric, text, logs):
-    stream.register_processor(processor)
-stream.process_stream([42, "hello", {"log_level": "INFO",
-                                     "log_message": "test"}])
-assert numeric.output()[1] == "42"
-assert text.output()[1] == "hello"
-assert "test" in logs.output()[1]
-stream.print_processors_stats()
-""",
+                (
+                    "from data_stream import (DataProcessor, DataStream, "
+                    "NumericProcessor, TextProcessor, LogProcessor)\n"
+                )
+                + STREAM,
             )
 
     def pipeline(self):
         path = "data_pipeline.py"
         if self.files("Exercise 2 files", [path]):
             self.lint(f"{path}: flake8", [path])
-            self.policy(f"{path}: forbidden operations", [path])
+            self.policy(
+                f"{path}: forbidden operations",
+                [path],
+                allowed_imports={"abc", "typing", "__future__"},
+            )
             self.classes(
                 path,
                 {
@@ -140,19 +150,11 @@ stream.print_processors_stats()
             self.script(path)
             self.probe(
                 "Pipeline plugin dispatch",
-                """
-from data_pipeline import DataStream, NumericProcessor
-class Plugin:
-    def __init__(self): self.received = []
-    def process_output(self, data): self.received.extend(data)
-stream = DataStream()
-stream.register_processor(NumericProcessor())
-stream.process_stream([10, 20])
-plugin = Plugin()
-stream.output_pipeline(2, plugin)
-assert len(plugin.received) == 2
-assert [item[1] for item in plugin.received] == ["10", "20"]
-""",
+                (
+                    "import data_pipeline\n"
+                    "globals().update(vars(data_pipeline))\n"
+                )
+                + PIPELINE,
             )
 
     def factories(self):
@@ -167,77 +169,29 @@ assert [item[1] for item in plugin.received] == ["10", "20"]
             self.policy(
                 "Exercise 3 forbidden operations",
                 ["battle.py", "capacitor.py", *Path("ex3").rglob("*.py")],
+                allowed_imports={"abc", "typing"},
             )
             self.script("battle.py")
             self.script("capacitor.py")
             self.probe(
+                "Factory demonstration",
+                "SCRIPT = 'battle.py'\nREQUIRED = {'create_base': 4, "
+                "'create_evolved': 2, 'describe': 6, 'attack': 6}\n"
+                + DEMONSTRATION,
+            )
+            self.probe(
+                "Capability demonstration",
+                "SCRIPT = 'capacitor.py'\nREQUIRED = {'create_base': 1, "
+                "'create_evolved': 1, 'describe': 2, 'attack': 4, "
+                "'transform': 2, 'revert': 2}\n" + DEMONSTRATION,
+            )
+            self.probe(
                 "Factory and capability behavior",
-                """
-import importlib
-import inspect
-import pkgutil
-import sys
-import ex3
-
-modules = [ex3]
-modules.extend(importlib.import_module(info.name) for info in
-               pkgutil.walk_packages(ex3.__path__, ex3.__name__ + "."))
-classes = {value for module in modules for value in vars(module).values()
-           if inspect.isclass(value) and value.__module__.startswith("ex3")}
-
-def abstract_with(methods):
-    return [cls for cls in classes if inspect.isabstract(cls)
-            and methods <= getattr(cls, "__abstractmethods__", set())]
-
-creatures = [cls for cls in abstract_with({"attack"})
-             if callable(getattr(cls, "describe", None))]
-capabilities = abstract_with({"transform", "revert"})
-factories = abstract_with({"create_base", "create_evolved"})
-assert creatures and capabilities and factories, "Missing abstract interfaces"
-assert all(not issubclass(cap, creature) for cap in capabilities
-           for creature in creatures), "Capability must not inherit Creature"
-concrete = [cls for cls in classes if not inspect.isabstract(cls)
-            and any(issubclass(cls, base) for base in factories)]
-assert len(concrete) >= 2, "Two concrete factories are required"
-exported = {value for key, value in vars(ex3).items()
-            if not key.startswith("_") and inspect.isclass(value)
-            and value.__module__.startswith("ex3")}
-assert all(inspect.isabstract(cls) or
-           not any(issubclass(cls, creature) for creature in creatures)
-           for cls in exported), "Do not expose concrete entities"
-assert set(concrete) <= exported, "The package must expose the factories"
-instances = []
-for cls in concrete:
-    try:
-        inspect.signature(cls).bind()
-    except TypeError:
-        print("Factory constructor needs arguments; review behavior manually.")
-        sys.exit(77)
-    factory = cls()
-    for method in (factory.create_base, factory.create_evolved):
-        try:
-            inspect.signature(method).bind()
-        except TypeError:
-            print("Factory creation needs arguments; review manually.")
-            sys.exit(77)
-        entity = method()
-        assert any(isinstance(entity, base) for base in creatures)
-        assert isinstance(entity.describe(), str)
-        before = entity.attack()
-        assert isinstance(before, str)
-        if any(isinstance(entity, cap) for cap in capabilities):
-            entity.transform()
-            transformed = entity.attack()
-            assert isinstance(transformed, str) and transformed != before
-            entity.revert()
-            assert isinstance(entity.attack(), str)
-            assert entity.attack() != transformed
-        instances.append(entity)
-assert any(any(isinstance(entity, cap) for cap in capabilities)
-           for entity in instances), "No transforming entity returned"
-assert any(not any(isinstance(entity, cap) for cap in capabilities)
-           for entity in instances), "No plain entity returned"
-""",
+                (
+                    "PACKAGES = ['ex3']; PACKAGE = 'ex3'\n"
+                    "CAPABILITIES = True; HEALING = False\n"
+                )
+                + FACTORIES,
                 can_skip=True,
             )
             self.package_contract(
@@ -260,92 +214,22 @@ assert any(not any(isinstance(entity, cap) for cap in capabilities)
             self.policy(
                 "Exercise 4 forbidden operations",
                 ["tournament.py", *Path("ex4").rglob("*.py")],
+                allowed_imports={"abc", "typing"},
             )
             self.script("tournament.py")
             self.probe(
+                "Strategy demonstration",
+                "SCRIPT = 'tournament.py'\n"
+                "REQUIRED = {'create_base': 2, 'act': 2, 'attack': 1}\n"
+                + DEMONSTRATION,
+            )
+            self.probe(
                 "Strategy behavior",
-                """
-import importlib
-import inspect
-import pkgutil
-import sys
-from unittest.mock import patch
-import ex3
-import ex4
-
-def classes(package):
-    modules = [package]
-    modules.extend(importlib.import_module(info.name) for info in
-                   pkgutil.walk_packages(package.__path__,
-                                         package.__name__ + "."))
-    return {value for module in modules for value in vars(module).values()
-            if inspect.isclass(value)
-            and value.__module__.startswith(package.__name__)}
-
-def noargs(callable_):
-    try:
-        inspect.signature(callable_).bind()
-    except TypeError:
-        print("Factory or strategy requires arguments; review manually.")
-        sys.exit(77)
-    return callable_()
-
-entity_classes = classes(ex3)
-strategy_classes = classes(ex4)
-capabilities = [cls for cls in entity_classes if inspect.isabstract(cls)
-                and {"transform", "revert"} <= cls.__abstractmethods__]
-factories = [cls for cls in entity_classes if not inspect.isabstract(cls)
-             and callable(getattr(cls, "create_base", None))
-             and callable(getattr(cls, "create_evolved", None))]
-assert capabilities and factories, "Missing capability or concrete factories"
-entities = [noargs(noargs(factory).create_base) for factory in factories]
-plain = next((e for e in entities if not any(isinstance(e, c)
-                                              for c in capabilities)), None)
-morph = next((e for e in entities if any(isinstance(e, c)
-                                          for c in capabilities)), None)
-assert plain is not None and morph is not None, "Need both entity types"
-strategies = [noargs(cls) for cls in strategy_classes
-              if not inspect.isabstract(cls)
-              and callable(getattr(cls, "act", None))
-              and callable(getattr(cls, "is_valid", None))]
-normal = next((s for s in strategies if s.is_valid(plain) is True
-               and s.is_valid(morph) is True), None)
-aggressive = next((s for s in strategies if s.is_valid(plain) is False
-                   and s.is_valid(morph) is True), None)
-assert normal is not None and aggressive is not None, "Missing strategies"
-try:
-    aggressive.act(plain)
-except Exception:
-    pass
-else:
-    raise AssertionError("Invalid strategy must raise an exception")
-
-def calls(entity, strategy, names):
-    events = []
-    patches = []
-    try:
-        for name in names:
-            original = getattr(entity, name)
-            def wrapper(*args, _name=name, _original=original, **kwargs):
-                events.append(_name)
-                return _original(*args, **kwargs)
-            item = patch.object(entity, name, side_effect=wrapper)
-            try:
-                item.start()
-            except (AttributeError, TypeError):
-                print("Cannot instrument entity methods; review manually.")
-                sys.exit(77)
-            patches.append(item)
-        strategy.act(entity)
-    finally:
-        for item in reversed(patches):
-            item.stop()
-    return events
-
-assert calls(plain, normal, ["attack"]) == ["attack"]
-assert calls(morph, aggressive, ["transform", "attack", "revert"]) == [
-    "transform", "attack", "revert"]
-""",
+                (
+                    "PACKAGES = ['ex3', 'ex4']; STRATEGY_PACKAGE = 'ex4'\n"
+                    "HEALING = False\n"
+                )
+                + STRATEGIES,
                 can_skip=True,
             )
             self.package_contract(

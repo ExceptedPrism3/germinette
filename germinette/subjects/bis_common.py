@@ -11,6 +11,45 @@ from rich.panel import Panel
 from germinette.core import BaseTester, console
 
 
+def qualified_name(node, aliases):
+    if isinstance(node, ast.Name):
+        return aliases.get(node.id, node.id)
+    if isinstance(node, ast.Attribute):
+        return qualified_name(node.value, aliases) + "." + node.attr
+    return ""
+
+
+def import_aliases(tree):
+    # shortcut: static aliases only, use isolation for untrusted student code.
+    aliases = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for item in node.names:
+                aliases[item.asname or item.name.split(".")[0]] = (
+                    item.name if item.asname else item.name.split(".")[0]
+                )
+        elif isinstance(node, ast.ImportFrom):
+            for item in node.names:
+                aliases[item.asname or item.name] = (
+                    node.module + "." if node.module else ""
+                ) + item.name
+    # Resolve ordinary assignments such as run = builtins.eval or p = sys.path.
+    for _ in range(2):
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                value = qualified_name(node.value, aliases)
+                targets = (
+                    node.targets
+                    if isinstance(node, ast.Assign)
+                    else [node.target]
+                )
+                if value:
+                    for target in targets:
+                        if isinstance(target, ast.Name):
+                            aliases[target.id] = value
+    return aliases
+
+
 class BisTester(BaseTester):
     def __init__(self):
         super().__init__()
@@ -102,21 +141,8 @@ class BisTester(BaseTester):
             )
         return result
 
-    def expected_exception(self, path, exception):
-        result = self.process(str(path), [sys.executable, str(path)])
-        if result is not None:
-            self.check(
-                str(path),
-                result.returncode == 0 or exception in result.stderr,
-                "Expected success with the exception handled, or an uncaught "
-                + exception
-                + ".\n"
-                + result.stdout
-                + result.stderr,
-            )
-
     def probe(self, name, source, *, can_skip=False):
-        result = self.process(name, [sys.executable, "-c", source])
+        result = self.process(name, [sys.executable, "-E", "-B", "-c", source])
         if result is not None:
             if can_skip and result.returncode == 77:
                 return self.record(name, "skipped", result.stdout.strip())
@@ -142,7 +168,8 @@ class BisTester(BaseTester):
             )
             return
         result = self.process(
-            name, [sys.executable, "-m", "flake8", *map(str, paths)]
+            name,
+            [sys.executable, "-m", "flake8", "--isolated", *map(str, paths)],
         )
         if result is None:
             return
@@ -153,37 +180,83 @@ class BisTester(BaseTester):
                 name, result.returncode == 0, result.stdout or result.stderr
             )
 
-    def policy(self, name, paths, *, no_syspath=False):
+    def policy(self, name, paths, *, no_syspath=False, allowed_imports=None):
         violations = []
         for path in paths:
             tree = self.tree(path)
             if tree is None:
                 continue
+            aliases = import_aliases(tree)
+
+            def local(module, level=0):
+                base = Path(path).parent
+                if level:
+                    for _ in range(level - 1):
+                        base = base.parent
+                else:
+                    base = Path(".")
+                target = base.joinpath(*module.split(".")) if module else base
+                return (
+                    target.with_suffix(".py").is_file()
+                    or (target / "__init__.py").is_file()
+                )
+
             for node in ast.walk(tree):
-                if (
-                    isinstance(node, ast.Call)
-                    and isinstance(node.func, ast.Name)
-                    and node.func.id in {"eval", "exec"}
-                ):
+                if allowed_imports is not None:
+                    imports = []
+                    if isinstance(node, ast.Import):
+                        imports = [(a.name, 0) for a in node.names]
+                    elif isinstance(node, ast.ImportFrom):
+                        imports = [(node.module or "", node.level)]
+                    if isinstance(node, ast.Call) and qualified_name(
+                        node.func, aliases
+                    ) in (
+                        "__import__",
+                        "builtins.__import__",
+                        "importlib.import_module",
+                    ):
+                        if node.args and isinstance(
+                            node.args[0], ast.Constant
+                        ):
+                            module = node.args[0].value
+                            if isinstance(module, str):
+                                imports.append((module, 0))
+                    for module, level in imports:
+                        if not local(module, level) and (
+                            level
+                            or module.split(".")[0] not in allowed_imports
+                        ):
+                            violations.append(
+                                f"{path}:{node.lineno}: unauthorized import "
+                                + "." * level
+                                + module
+                            )
+                if isinstance(node, ast.Call) and qualified_name(
+                    node.func, aliases
+                ) in {"eval", "exec", "builtins.eval", "builtins.exec"}:
                     violations.append(
-                        f"{path}:{node.lineno}: forbidden {node.func.id}()"
+                        f"{path}:{node.lineno}: forbidden "
+                        f"{qualified_name(node.func, aliases)}()"
                     )
                 if no_syspath:
                     target = None
                     if isinstance(
-                        node, (ast.Assign, ast.AnnAssign, ast.AugAssign)
+                        node,
+                        (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Delete),
                     ):
                         targets = (
                             node.targets
                             if isinstance(node, ast.Assign)
-                            else [node.target]
+                            else (
+                                node.targets
+                                if isinstance(node, ast.Delete)
+                                else [node.target]
+                            )
                         )
                         target = any(
-                            isinstance(part, ast.Attribute)
-                            and part.attr == "path"
-                            and isinstance(part.value, ast.Name)
-                            and part.value.id == "sys"
+                            qualified_name(part, aliases) == "sys.path"
                             for item in targets
+                            if not isinstance(item, ast.Name)
                             for part in ast.walk(item)
                         )
                     if isinstance(node, ast.Call) and isinstance(
@@ -191,8 +264,7 @@ class BisTester(BaseTester):
                     ):
                         obj = node.func.value
                         target = target or (
-                            node.func.attr
-                            in {
+                            node.func.attr in {
                                 "append",
                                 "insert",
                                 "extend",
@@ -202,10 +274,7 @@ class BisTester(BaseTester):
                                 "reverse",
                                 "sort",
                             }
-                            and isinstance(obj, ast.Attribute)
-                            and obj.attr == "path"
-                            and isinstance(obj.value, ast.Name)
-                            and obj.value.id == "sys"
+                            and qualified_name(obj, aliases) == "sys.path"
                         )
                     if target:
                         violations.append(

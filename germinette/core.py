@@ -15,11 +15,11 @@ console = Console()
 # ``scripts/subject_pdf_urls.json``.
 MODULE_VERSION_LABELS: dict[str, str] = {
     "python_module_00": "v.3.0",
-    "python_module_01": "v.3.0",
+    "python_module_01": "v.3.2",
     "python_module_02": "v.3.0",
-    "python_module_03": "v.3.0",
+    "python_module_03": "v.3.1",
     "python_module_04": "v.3.0",
-    "python_module_05": "v.3.0",
+    "python_module_05": "v.3.1",
     "python_module_06": "v.2.0",
     "python_module_07": "v.3.0",
     "python_module_08": "v.3.0",
@@ -95,13 +95,12 @@ class ModuleDetector:
         "python_module_02": {
             "files": [
                 "ft_first_exception.py", "ex0/ft_first_exception.py",
-                "ft_different_errors.py", "ex1/ft_different_errors.py",
-                "ft_custom_errors.py", "ex2/ft_custom_errors.py",
-                "ft_finally_block.py", "ex3/ft_finally_block.py",
-                "ft_raise_errors.py", "ex4/ft_raise_errors.py",
-                "ft_garden_management.py", "ex5/ft_garden_management.py"
+                "ft_raise_exception.py", "ex1/ft_raise_exception.py",
+                "ft_different_errors.py", "ex2/ft_different_errors.py",
+                "ft_custom_errors.py", "ex3/ft_custom_errors.py",
+                "ft_finally_block.py", "ex4/ft_finally_block.py"
             ],
-            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4", "ex5"]
+            "dirs": ["ex0", "ex1", "ex2", "ex3", "ex4"]
         },
         "a_maze_ing": {
             "files": ["a_maze_ing.py", "Makefile"],
@@ -123,15 +122,23 @@ class ModuleDetector:
         },
         "python_module_05": {
             "files": [
-                "stream_processor.py", "ex0/stream_processor.py",
+                "ex0/data_processor.py",
                 "data_stream.py", "ex1/data_stream.py",
-                "nexus_pipeline.py", "ex2/nexus_pipeline.py"
+                "ex2/data_pipeline.py"
             ],
             "dirs": ["ex0", "ex1", "ex2"]
         },
         "python_module_06": {
             "files": ["ft_sacred_scroll.py", "ft_import_transmutation.py"],
             "dirs": ["alchemy"]
+        },
+        "python_module_05_bis": {
+            "files": ["ex0/loading.py", "ex1/oracle.py"],
+            "dirs": ["ex0", "ex1"],
+        },
+        "python_module_06_bis": {
+            "files": ["data_processor.py", "data_stream.py", "data_pipeline.py"],
+            "dirs": ["ex3", "ex4"],
         },
         "python_module_07": {
             # DataDeck v3.0
@@ -414,19 +421,40 @@ class BaseTester:
             )
             return result.stdout
         except subprocess.TimeoutExpired:
-            return "Error: Script execution timed out after 10 seconds."
+            return f"Script execution failed: timed out after {timeout} seconds."
         except subprocess.CalledProcessError as e:
             # Return stderr as well for error checking
-            return e.stdout + e.stderr
+            return f"Script execution failed: exit status {e.returncode}.\n" + (e.stdout or "") + (e.stderr or "")
         except Exception as e:
-            return str(e)
+            return f"Script execution failed: {e}"
+
+    def check_behavior(self, label, source, *, cwd=None, can_skip=False):
+        """Run a subject contract in a fresh interpreter with a bounded runtime."""
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "-E", "-B", "-c", source], cwd=cwd,
+                capture_output=True, text=True, timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            self.record_error(label, "Behavior Error", str(exc))
+            return False
+        if can_skip and result.returncode == 77:
+            console.print(f"[yellow]SKIP[/yellow] {escape(label)}: {escape(result.stdout.strip())}")
+            return False
+        if result.returncode:
+            self.record_error(label, "Behavior Error", result.stdout + result.stderr)
+            return False
+        return True
 
     def check_for_crash(self, output, label):
         """
         Checks if the script output contains runtime crash indicators.
         Returns True if a crash is detected (and prints KO), False otherwise.
         """
-        if "Traceback (most recent call last):" in output or \
+        if output.startswith("Script execution failed:") or \
+           "Traceback (most recent call last):" in output or \
            "SyntaxError:" in output or \
            "IndentationError:" in output or \
            "AttributeError:" in output: # Added AttributeError explicitly for safety
@@ -473,7 +501,7 @@ class BaseTester:
             return f"Error checking docstrings: {e}"
 
     # Credit to @tirnovantudor8-maker (GitHub Issue #19) and @eloiberlinger1 for reporting and clarifying the mypy internal crash on circular imports!
-    def check_flake8(self, path, timeout=10):
+    def check_flake8(self, path, timeout=10, *, expected_mypy_errors=()):
         """Runs flake8 and mypy; returns None only if both pass."""
         import subprocess
         
@@ -485,7 +513,7 @@ class BaseTester:
                 timeout=timeout
             )
             mypy_result = subprocess.run(
-                [sys.executable, "-m", "mypy", path],
+                [sys.executable, "-m", "mypy", "--show-error-codes", "--no-pretty", path],
                 capture_output=True,
                 text=True,
                 timeout=timeout
@@ -495,6 +523,17 @@ class BaseTester:
             is_mypy_internal_error = any("INTERNAL ERROR" in line for line in mypy_lines)
             
             mypy_failed = mypy_result.returncode != 0 and not is_mypy_internal_error
+            if mypy_failed and expected_mypy_errors:
+                errors = [line for line in mypy_lines if ": error:" in line]
+                unexpected = [
+                    line for line in errors
+                    if not any(
+                        re.match(r"(?:" + "|".join(re.escape(name) for name in (str(path), os.path.relpath(path))) + rf"):{lineno}(?::\d+)?: error:", line)
+                        and line.endswith(f"[{code}]")
+                        for lineno, code in expected_mypy_errors
+                    )
+                ]
+                mypy_failed = mypy_result.returncode != 1 or bool(unexpected) or not errors
 
             if is_mypy_internal_error:
                 abs_path = os.path.normpath(os.path.abspath(path))
@@ -570,7 +609,9 @@ class BaseTester:
                         missing.append(f"Line {node.lineno}: Missing return type hint for function '{node.name}'")
                     
                     # Check parameter type annotations (skip 'self' and 'cls')
-                    for arg in node.args.args:
+                    arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+                    arguments.extend(arg for arg in (node.args.vararg, node.args.kwarg) if arg)
+                    for arg in arguments:
                         if arg.arg in ('self', 'cls'):
                             continue
                         if arg.annotation is None:

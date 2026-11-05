@@ -8,13 +8,15 @@ import builtins
 import sys
 import os
 import inspect
+import contextlib
+import io
 
 console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
         super().__init__()
-        self.title = "[bold blue]Testing Module 01: Code Cultivation (v3.0)[/bold blue]"
+        self.title = "[bold blue]Testing Module 01: Code Cultivation (v3.2)[/bold blue]"
         self.exercises = [
             ("ft_garden_intro", self.test_garden_intro),
             ("ft_garden_data", self.test_garden_data),
@@ -81,9 +83,7 @@ class Tester(BaseTester):
 
     def _static_sanity_checks(self, path):
         """
-        Catch common silent false positives:
-        1) passing builtins (hex/list/str/...) as values into super().__init__(...)
-        2) using self.<attr> names that were never assigned anywhere in the class
+        Reject builtins accidentally passed as plant values to super().__init__.
         """
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -113,82 +113,6 @@ class Tester(BaseTester):
                         f"Line {node.lineno}: suspicious builtin '{arg.id}' passed to super().__init__(...)"
                     )
 
-        # 2) Undefined self.<attr> usage in classes
-        for cls in [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]:
-            # Only validate classes that define their own __init__.
-            # Subclasses often read inherited attributes set by parent __init__.
-            method_names = {
-                n.name for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-            }
-            nested_class_names = {
-                n.name for n in cls.body if isinstance(n, ast.ClassDef)
-            }
-            if "__init__" not in method_names:
-                continue
-            # If __init__ delegates to super().__init__(...), parent class owns
-            # core attribute assignment (common in this module), so skip this
-            # undefined-attribute heuristic for that class.
-            has_super_init_call = False
-            for node in cls.body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "__init__":
-                    for sub in ast.walk(node):
-                        if not isinstance(sub, ast.Call):
-                            continue
-                        func = sub.func
-                        if not isinstance(func, ast.Attribute) or func.attr != "__init__":
-                            continue
-                        if (
-                            isinstance(func.value, ast.Call)
-                            and isinstance(func.value.func, ast.Name)
-                            and func.value.func.id == "super"
-                        ):
-                            has_super_init_call = True
-                            break
-                if has_super_init_call:
-                    break
-            if has_super_init_call:
-                continue
-
-            assigned = set()
-            for item in cls.body:
-                if isinstance(item, ast.Assign):
-                    for target in item.targets:
-                        if isinstance(target, ast.Name):
-                            assigned.add(target.id)
-                elif isinstance(item, ast.AnnAssign):
-                    if isinstance(item.target, ast.Name):
-                        assigned.add(item.target.id)
-
-            for n in ast.walk(cls):
-                if not isinstance(n, ast.Attribute):
-                    continue
-                if not isinstance(n.value, ast.Name) or n.value.id != "self":
-                    continue
-                if isinstance(n.ctx, ast.Store):
-                    assigned.add(n.attr)
-
-            # Also collect external attribute assignments across the entire module AST (e.g. p.name = ...)
-            for n in ast.walk(tree):
-                if isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Store):
-                    assigned.add(n.attr)
-
-            used = []
-            for n in ast.walk(cls):
-                if not isinstance(n, ast.Attribute):
-                    continue
-                if not isinstance(n.value, ast.Name) or n.value.id != "self":
-                    continue
-                if isinstance(n.ctx, ast.Load):
-                    used.append((n.attr, n.lineno))
-
-            for attr, lineno in used:
-                if attr in method_names or attr in nested_class_names:
-                    continue
-                if attr not in assigned:
-                    violations.append(
-                        f"Line {lineno}: self.{attr} is used but never assigned in class {cls.name}"
-                    )
-
         if violations:
             return "\n".join(violations)
         return None
@@ -204,33 +128,35 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # v3.0: Must use if __name__ == "__main__": pattern
+            # v3.2: Must use if __name__ == "__main__": pattern
             # Output should include plant info (name, height, age)
             with open(path, "r") as f:
                 source = f.read()
 
-            if '__name__' not in source or '__main__' not in source:
+            tree = ast.parse(source)
+            has_main = any(
+                isinstance(node, ast.If)
+                and isinstance(node.test, ast.Compare)
+                and isinstance(node.test.left, ast.Name)
+                and node.test.left.id == "__name__"
+                and len(node.test.ops) == 1
+                and isinstance(node.test.ops[0], ast.Eq)
+                and len(node.test.comparators) == 1
+                and isinstance(node.test.comparators[0], ast.Constant)
+                and node.test.comparators[0].value == "__main__"
+                for node in tree.body
+            )
+            if not has_main:
                 console.print("[red]KO[/red]")
                 self.record_error(label, "Missing Pattern",
                                   "Your script must use the 'if __name__ == \"__main__\":' pattern.\n"
                                   "This is required by the subject.")
                 return
 
-            # v3.0 PDF shows Rose, 25cm, 30 days as example — approximate match
-            checks_found = 0
-            for keyword in ["Plant:", "Height:", "Age:"]:
-                if keyword in output:
-                    checks_found += 1
+            if not output.strip():
+                self.record_error(label, "Output Mismatch", "Display the plant name, height and age.")
+                return
 
-            if checks_found < 2:
-                # Fallback: check for the old-style format too
-                if "Rose" not in output and "cm" not in output:
-                    console.print("[red]KO[/red]")
-                    self.record_error(label, "Output Mismatch",
-                                      "Expected plant information in output (name, height, age).\n"
-                                      f"Got:\n{output}")
-                    return
-            
             console.print("[green]OK[/green]")
         except Exception as e:
             console.print("[red]KO[/red]")
@@ -251,7 +177,7 @@ class Tester(BaseTester):
 
             Plant = mod.Plant
 
-            # v3.0: Plant class must have show() method.
+            # v3.2: Plant class must have show() method.
             # Support both parameterized and unparameterized Plant instantiation
             try:
                 p = Plant("Test", 10, 5)
@@ -272,7 +198,7 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # v3.0 expects at least 3 plants displayed.
+            # v3.2 expects at least 3 plants displayed.
             # Format: "Name: Xcm, Y days old"
             line_count = 0
             for line in output.strip().split("\n"):
@@ -311,17 +237,17 @@ class Tester(BaseTester):
                     p = Plant()
                     p.name = "Bamboo"
                     p.height = 100
-                    p.age = 10
+                    p.plant_age = 10
                 except TypeError:
                     p = Plant.__new__(Plant)
                     p.name = "Bamboo"
                     p.height = 100
-                    p.age = 10
+                    p.plant_age = 10
             
-            # v3.0: requires grow() and age() methods; show() instead of get_info()
+            # v3.2: requires grow() and age() methods; show() instead of get_info()
             missing = []
-            if not hasattr(p, 'grow') and not hasattr(Plant, 'grow'): missing.append('grow')
-            if not hasattr(p, 'age') and not hasattr(Plant, 'age'): missing.append('age')
+            if not callable(getattr(Plant, 'grow', None)): missing.append('grow')
+            if not callable(getattr(Plant, 'age', None)): missing.append('age')
             if not hasattr(p, 'show') and not hasattr(Plant, 'show'):
                 # Accept get_info as fallback for backwards compat
                 if not hasattr(p, 'get_info') and not hasattr(Plant, 'get_info'):
@@ -336,7 +262,7 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            if "=== Day 1 ===" not in output or "=== Day 7 ===" not in output:
+            if "Day 1" not in output or "Day 7" not in output:
                  self.record_error(label, "Output Mismatch", "Expected simulation output (Day 1 to Day 7).")
                  console.print("[red]KO[/red]")
                  return
@@ -356,16 +282,17 @@ class Tester(BaseTester):
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # v3.0: expects "=== Plant Factory Output ===" header and at least 5 "Created:" lines
-            if "=== Plant Factory Output ===" not in output:
-                self.record_error(label, "Output Mismatch", "Missing required header: '=== Plant Factory Output ==='")
-                console.print("[red]KO[/red]")
+            Plant = getattr(mod, "Plant", None)
+            if not inspect.isclass(Plant):
+                self.record_error(label, "Missing Class", "Plant must be a class.")
                 return
-            
-            if output.count("Created:") < 5:
-                 self.record_error(label, "Logic Error", "Expected at least 5 plants to be created (5 'Created:' lines).")
-                 console.print("[red]KO[/red]")
-                 return
+            plant = Plant("Test", 10, 5)
+            if not callable(getattr(plant, "show", None)):
+                self.record_error(label, "Missing Method", "Plant must have show().")
+                return
+            if sum("cm" in line and "days" in line for line in output.splitlines()) < 5:
+                self.record_error(label, "Insufficient Plants", "Display at least five initialized plants.")
+                return
 
             console.print("[green]OK[/green]")
         except Exception as e:
@@ -379,7 +306,7 @@ class Tester(BaseTester):
         if not path: return
 
         try:
-            # v3.0 says improve Plant class, not create SecurePlant
+            # v3.2 says improve Plant class, not create SecurePlant
             # Accept both for backwards compatibility
             PlantClass = getattr(mod, 'Plant', None)
             class_name = 'Plant'
@@ -389,7 +316,7 @@ class Tester(BaseTester):
             if not PlantClass:
                 self.record_error(label, "Missing Class",
                                   "Neither 'Plant' nor 'SecurePlant' class found.\n"
-                                  "The v3.0 subject requires improving the Plant class with encapsulation.")
+                                  "The v3.2 subject requires improving the Plant class with encapsulation.")
                 console.print("[red]KO[/red]")
                 return
 
@@ -404,19 +331,33 @@ class Tester(BaseTester):
                 console.print("[red]KO[/red]")
                 return
 
-            # v3.0: check encapsulation uses _protected convention (not __mangling)
+            for setter, getter in ((p.set_height, p.get_height), (p.set_age, p.get_age)):
+                setter(0)
+                if getter() != 0:
+                    self.record_error(label, "Security Error", "Zero is a valid height or age.")
+                    return
+                setter(20)
+                if getter() != 20:
+                    self.record_error(label, "Security Error", "Valid updates must be stored.")
+                    return
+                captured = io.StringIO()
+                with contextlib.redirect_stdout(captured):
+                    setter(-1)
+                if getter() != 20 or not captured.getvalue().strip():
+                    self.record_error(label, "Security Error", "Reject negative values with an error message and preserve existing data.")
+                    return
             instance_vars = vars(p)
-            has_protected = any(k.startswith('_') and not k.startswith('__') for k in instance_vars)
-            has_mangling = any(k.startswith(f'_{class_name}__') or k.startswith('__') and not k.startswith('__') and k.endswith('__') for k in instance_vars)
-            
-            if not has_protected and not has_mangling:
-                console.print("[yellow]Warning: No protected attributes found (expected _ prefix convention)[/yellow]")
+            if not any(key.startswith("_") for key in instance_vars) or any(
+                key.startswith(f"_{class_name}__") for key in instance_vars
+            ):
+                self.record_error(label, "Encapsulation Error", "Use protected attributes (_name), not name mangling (__name).")
+                return
 
             # Run script to check validation messages
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # v3.0 error format: "Rose: Error, height can't be negative"
+            # v3.2 error format: "Rose: Error, height can't be negative"
             # Accept both old and new error messages
             has_rejection = False
             rejection_patterns = [
@@ -429,7 +370,7 @@ class Tester(BaseTester):
             if not has_rejection:
                  self.record_error(label, "Security Error",
                                    "Expected error/rejection message when setting negative values.\n"
-                                   "v3.0 format: 'Rose: Error, height can't be negative'")
+                                   "v3.2 format: 'Rose: Error, height can't be negative'")
                  console.print("[red]KO[/red]")
                  return
 
@@ -458,6 +399,9 @@ class Tester(BaseTester):
 
             # Check inheritance — all should inherit from Plant
             Plant = getattr(mod, 'Plant', None)
+            if not inspect.isclass(Plant):
+                self.record_error(label, 'Missing Class', 'Plant class is required.')
+                return
             if Plant:
                 for cls, name in [(Flower, "Flower"), (Tree, "Tree"), (Vegetable, "Vegetable")]:
                     if not issubclass(cls, Plant):
@@ -479,14 +423,19 @@ class Tester(BaseTester):
                  console.print("[red]KO[/red]")
                  return
 
-            # v3.0: Vegetable needs harvest_season and nutritional_value
-            try:
-                v = Vegetable("Tomato", 5, 10, "April")
-                if not hasattr(v, 'harvest_season') and not hasattr(v, '_harvest_season'):
-                    console.print("[yellow]Warning: Vegetable missing 'harvest_season' attribute[/yellow]")
-            except TypeError:
-                # Constructor might need different args, that's okay
-                pass
+            v = Vegetable("Tomato", 5, 10, "April")
+            def nutrition():
+                return getattr(v, "nutritional_value", getattr(v, "_nutritional_value", None))
+            if nutrition() != 0:
+                self.record_error(label, "Nutrition Error", "Vegetable nutritional value must start at zero.")
+                return
+            for method in (v.age, v.grow):
+                before = nutrition()
+                parameters = inspect.signature(method).parameters
+                method(*([1] if parameters else []))
+                if nutrition() is None or nutrition() <= before:
+                    self.record_error(label, "Nutrition Error", "Vegetable age() and grow() must increase nutritional value.")
+                    return
 
             # Verify script execution
             output = self._run_script(path)
@@ -504,72 +453,41 @@ class Tester(BaseTester):
         if not path: return
 
         try:
-            # v3.0: Plant class with static method, class method, nested stats
-            # Also accept old GardenManager for backwards compat
-            Plant = getattr(mod, 'Plant', None)
-            GardenManager = getattr(mod, 'GardenManager', None)
-
-            # Check for Seed class (v3.0: inherits from Flower)
-            Seed = getattr(mod, 'Seed', None)
-
-            if not Plant and not GardenManager:
-                self.record_error(label, "Missing Class",
-                                  "Neither 'Plant' nor 'GardenManager' found.\n"
-                                  "v3.0 requires Plant class with static/class methods and nested stats.")
-                console.print("[red]KO[/red]")
+            Plant = getattr(mod, "Plant", None)
+            Flower = getattr(mod, "Flower", None)
+            Seed = getattr(mod, "Seed", None)
+            if not all(inspect.isclass(cls) for cls in (Plant, Flower, Seed)):
+                self.record_error(label, "Missing Class", "Plant, Flower and Seed classes are required.")
                 return
-
-            # v3.0 checks: static method on Plant for age check
-            if Plant:
-                # Check for static method (is_older_than_year or similar)
-                has_static = False
-                for name, method in inspect.getmembers(Plant):
-                    if isinstance(inspect.getattr_static(Plant, name, None), staticmethod):
-                        has_static = True
-                        break
-                
-                if not has_static:
-                    console.print("[yellow]Warning: No static method found on Plant class[/yellow]")
-
-                # Check for class method (anonymous plant creation)
-                has_classmethod = False
-                for name, method in inspect.getmembers(Plant):
-                    if isinstance(inspect.getattr_static(Plant, name, None), classmethod):
-                        has_classmethod = True
-                        break
-                
-                if not has_classmethod:
-                    console.print("[yellow]Warning: No class method found on Plant class[/yellow]")
-
-            # Check for nested stats class
-            has_nested_stats = False
-            if Plant:
-                for attr_name in dir(Plant):
-                    attr = getattr(Plant, attr_name, None)
-                    if inspect.isclass(attr) and attr_name not in ('__class__',):
-                        has_nested_stats = True
-                        break
-            if GardenManager:
-                if hasattr(GardenManager, 'GardenStats') and inspect.isclass(getattr(GardenManager, 'GardenStats')):
-                    has_nested_stats = True
-
-            if not has_nested_stats:
-                console.print("[yellow]Warning: No nested stats class found[/yellow]")
-
-            # Check Seed class inherits from Flower
-            if Seed:
-                Flower = getattr(mod, 'Flower', None)
-                if Flower and not issubclass(Seed, Flower):
-                    self.record_error(label, "Inheritance Error",
-                                      "Seed class must inherit from Flower")
-                    console.print("[red]KO[/red]")
-                    return
+            if not issubclass(Seed, Flower):
+                self.record_error(label, "Inheritance Error", "Seed must inherit from Flower.")
+                return
+            static = [getattr(Plant, name) for name in dir(Plant)
+                      if isinstance(inspect.getattr_static(Plant, name), staticmethod)]
+            if not any(method(30) is False and method(365) is False and method(400) is True
+                       for method in static if len(inspect.signature(method).parameters) == 1):
+                self.record_error(label, "Static Method Error", "Plant needs a static method checking whether an age is older than a year.")
+                return
+            class_methods = [getattr(Plant, name) for name in dir(Plant)
+                             if isinstance(inspect.getattr_static(Plant, name), classmethod)]
+            if not class_methods:
+                self.record_error(label, "Class Method Error", "Plant needs an anonymous plant class method.")
+                return
+            nested = [value for value in vars(Plant).values() if inspect.isclass(value)]
+            if not nested:
+                self.record_error(label, "Statistics Error", "Plant needs a nested statistics class.")
+                return
+            functions = [value for value in vars(mod).values()
+                         if inspect.isfunction(value) and value.__module__ == mod.__name__]
+            if not functions:
+                self.record_error(label, "Statistics Error", "A standalone statistics display function is required.")
+                return
 
             # Run script and check for expected output sections
             output = self._run_script(path)
             if self.check_for_crash(output, label): return
 
-            # v3.0 expects: year-old check, flower stats, tree stats with shade, seed, anonymous
+            # v3.2 expects: year-old check, flower stats, tree stats with shade, seed, anonymous
             # Accept both old and new output formats
             checks = 0
             if "Stats:" in output or "Garden scores" in output:
@@ -582,7 +500,7 @@ class Tester(BaseTester):
             if checks < 2:
                 self.record_error(label, "Output Error",
                                   "Missing expected analytics sections in output.\n"
-                                  "v3.0 expects: year check, stats display, anonymous plant.\n"
+                                  "v3.2 expects: year check, stats display, anonymous plant.\n"
                                   f"Got:\n{output}")
                 console.print("[red]KO[/red]")
                 return

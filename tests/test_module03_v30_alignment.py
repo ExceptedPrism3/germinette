@@ -65,7 +65,7 @@ def test_module03_ex3_accepts_achievement_hunter_v30_output(
                 only_p: set[str] = by_player[p] - set().union(*others)
                 print(f"Only {p} has: {only_p}")
             for p in players:
-                missing: set[str] = all_ach - by_player[p]
+                missing: set[str] = set(_POOL) - by_player[p]
                 print(f"{p} is missing: {missing}")
 
 

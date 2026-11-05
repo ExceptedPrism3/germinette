@@ -5,13 +5,16 @@ import builtins
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
+from germinette.subjects.nexus_checks import (
+    PROCESSORS, STREAM, PIPELINE, intentional_ingest_errors,
+)
 
 console = Console()
 
 class Tester(BaseTester):
     def __init__(self):
         super().__init__()
-        self.title = "[bold cyan]Testing Module 05: Code Nexus (v3.0)[/bold cyan]"
+        self.title = "[bold cyan]Testing Module 05: Code Nexus (v3.1)[/bold cyan]"
         self.exercises = [
             ("data_processor", self.test_data_processor),
             ("data_stream", self.test_data_stream),
@@ -56,7 +59,14 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Missing File", msg)
              return None, None
 
-        style_errors = self.check_flake8(found_path)
+        try:
+            with open(found_path, encoding="utf-8") as source:
+                tree = ast.parse(source.read(), filename=found_path)
+        except (OSError, UnicodeError, SyntaxError) as exc:
+            self.record_error(exercise_label, "Source Error", str(exc))
+            return None, None
+        expected = intentional_ingest_errors(tree) if module_name == "data_processor" else []
+        style_errors = self.check_flake8(found_path, expected_mypy_errors=expected)
         if style_errors:
              console.print("[red]KO[/red]")
              self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
@@ -92,6 +102,12 @@ class Tester(BaseTester):
             self._all_builtin_functions(),
             allowed_imports=["abc", "typing"],
             enforce_try_except=False,
+        ):
+            return
+
+        if not self.check_behavior(
+            exercise_label,
+            "import runpy\nglobals().update(runpy.run_path(" + repr(path) + "))\n" + PROCESSORS,
         ):
             return
 
@@ -142,6 +158,7 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
+             self.record_error(exercise_label, "Execution Error", str(e))
 
     def test_data_stream(self):
         console.print("\n[bold]Testing Exercise 1: data_stream[/bold]")
@@ -155,6 +172,12 @@ class Tester(BaseTester):
             self._all_builtin_functions(),
             allowed_imports=["abc", "typing"],
             enforce_try_except=False,
+        ):
+            return
+
+        if not self.check_behavior(
+            exercise_label,
+            "import runpy\nglobals().update(runpy.run_path(" + repr(path) + "))\n" + STREAM,
         ):
             return
 
@@ -205,6 +228,7 @@ class Tester(BaseTester):
 
         except Exception as e:
               console.print(f"[red]KO (Execution Error: {e})[/red]")
+              self.record_error(exercise_label, "Execution Error", str(e))
 
     def test_data_pipeline(self):
         console.print("\n[bold]Testing Exercise 2: data_pipeline[/bold]")
@@ -221,6 +245,12 @@ class Tester(BaseTester):
         ):
             return
 
+        if not self.check_behavior(
+            exercise_label,
+            "import runpy\nglobals().update(runpy.run_path(" + repr(path) + "))\n" + PIPELINE,
+        ):
+            return
+
         try:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -232,15 +262,6 @@ class Tester(BaseTester):
             classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
             if "DataStream" not in classes:
                 self.record_error(exercise_label, "Structure Error", "Missing DataStream class.")
-                return
-            has_csv = any("CSV" in name.upper() for name in classes)
-            has_json = any("JSON" in name.upper() for name in classes)
-            if not has_csv or not has_json:
-                self.record_error(
-                    exercise_label,
-                    "Structure Error",
-                    "Expected at least one CSV plugin class and one JSON plugin class.",
-                )
                 return
             methods = {
                 node.name: {f.name for f in node.body if isinstance(f, ast.FunctionDef)}
@@ -254,8 +275,9 @@ class Tester(BaseTester):
                     "DataStream must implement output_pipeline(nb, plugin).",
                 )
                 return
-        except Exception:
-            pass
+        except Exception as exc:
+            self.record_error(exercise_label, "Structure Error", str(exc))
+            return
 
         import subprocess
         try:
@@ -284,3 +306,4 @@ class Tester(BaseTester):
 
         except Exception as e:
              console.print(f"[red]KO (Execution Error: {e})[/red]")
+             self.record_error(exercise_label, "Execution Error", str(e))

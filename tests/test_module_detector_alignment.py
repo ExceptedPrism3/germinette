@@ -47,3 +47,35 @@ def test_detector_prefers_stronger_module09_file_signature(
 
     monkeypatch.chdir(tmp_path)
     assert ModuleDetector.detect() == "python_module_09"
+
+
+@pytest.mark.parametrize(
+    "module,paths",
+    [
+        (
+            "python_module_06",
+            [
+                "alchemy/__init__.py",
+                "ft_alembic_0.py",
+                "ft_alembic_1.py",
+                "ft_alembic_4.py",
+            ],
+        ),
+        (
+            "python_module_08",
+            ["ex0/construct.py", "ex1/loading.py", "ex2/oracle.py"],
+        ),
+    ],
+)
+def test_codex_bis_detection_preserves_legacy_subjects(
+    tmp_path,
+    monkeypatch,
+    module,
+    paths,
+):
+    from germinette.core import ModuleDetector
+
+    for name in paths:
+        _touch(tmp_path / name)
+    monkeypatch.chdir(tmp_path)
+    assert ModuleDetector.detect() == module

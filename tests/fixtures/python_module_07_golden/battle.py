@@ -1,34 +1,24 @@
-"""Battle testing."""
+"""Demonstrate both factories and battle their base creatures."""
 
-from ex0.factories import FlameFactory, AquaFactory
-
-
-def test_battle() -> None:
-    """Test the battle."""
-    print("testing factory")
-    print("Flameling is a Fire type Creature")
-    print("Flameling uses Ember!")
-    print("Pyrodon is a Fire/Flying type Creature")
-    print("Pyrodon uses Flamethrower!")
-
-    print("testing factory")
-    print("Aquabub is a Water type Creature")
-    print("Aquabub uses Water Gun!")
-    print("Torragon is a Water type Creature")
-    print("Torragon uses Hydro Pump!")
-
-    print("testing battle")
-    print("Flameling is a Fire type Creature")
-    print("vs.")
-    print("Aquabub is a Water type Creature")
-    print("fight!")
-    print("Flameling uses Ember!")
-    print("Aquabub uses Water Gun!")
+from ex0 import AquaFactory, CreatureFactory, FlameFactory
 
 
-if __name__ == "__main__":
-    test_battle()
+def test_factory(factory: CreatureFactory) -> None:
+    print('Testing factory')
+    for entity in (factory.create_base(), factory.create_evolved()):
+        print(entity.describe())
+        print(entity.attack())
 
-    # Use the factories
-    FlameFactory()
-    AquaFactory()
+
+def battle(first: CreatureFactory, second: CreatureFactory) -> None:
+    print('Testing battle')
+    left, right = first.create_base(), second.create_base()
+    print(left.describe(), 'vs.', right.describe())
+    print(left.attack(), right.attack())
+
+
+if __name__ == '__main__':
+    flame, aqua = FlameFactory(), AquaFactory()
+    test_factory(flame)
+    test_factory(aqua)
+    battle(flame, aqua)

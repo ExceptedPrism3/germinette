@@ -1,11 +1,11 @@
 import sys
 import os
 import ast
-import importlib.util
+import subprocess
+import tempfile
+from pathlib import Path
 from rich.console import Console
-from rich.panel import Panel
 from germinette.core import BaseTester
-from germinette.utils import IOTester
 
 console = Console()
 
@@ -19,25 +19,6 @@ class Tester(BaseTester):
             ("ft_stream_management", self.test_stream_management),
             ("ft_vault_security", self.test_vault_security),
         ]
-        self.generated_files = []
-        self._setup_test_data()
-
-    def _setup_test_data(self):
-        """Generates necessary test files for Module 04."""
-        files = {
-            "ancient_fragment.txt": "SECURE ARCHIVE FRAGMENT - 0x892B\nType: Text Data\nOrigin: Sector 7\nContent: Digital preservation protocols established 2087\nKnowledge must survive the entropy wars\nEvery byte saved is a victory against oblivion",
-            "standard_archive.txt": "Archive ID: STD-2024-X\nStatus: Preserved\nRetention: Indefinite\nContent: Knowledge preserved for humanity",
-        }
-        
-        try:
-            for name, content in files.items():
-                if not os.path.exists(name):
-                    with open(name, "w") as f:
-                        f.write(content)
-                    self.generated_files.append(name)
-        except Exception as e:
-            console.print(f"[red]Warning: Failed to create test data: {e}[/red]")
-
     def _load_module(self, module_name, exercise_label):
         cwd = os.getcwd()
         if os.path.exists(os.path.join(cwd, "python_module_04")):
@@ -91,16 +72,6 @@ class Tester(BaseTester):
 
         return "FOUND", found_path
 
-    def run(self, exercise_name=None):
-        self._setup_test_data()
-        try:
-            super().run(exercise_name)
-        finally:
-            for f in self.generated_files:
-                try:
-                    if os.path.exists(f): os.remove(f)
-                except: pass
-
     # --- Exercise Tests ---
 
     def _enforce_no_with_before_ex3(self, path, exercise_label):
@@ -120,317 +91,140 @@ class Tester(BaseTester):
             pass
         return True
 
-    def _load_module_object(self, path):
-        module_name = f"_germinette_mod04_{os.path.basename(path).replace('.py', '')}"
-        spec = importlib.util.spec_from_file_location(module_name, path)
-        if spec is None or spec.loader is None:
+    def _execute(self, path, label, directory, args=(), answer=""):
+        try:
+            result = subprocess.run(
+                [sys.executable, path, *map(str, args)], cwd=directory,
+                input=answer, capture_output=True, text=True, timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            self.record_error(label, "Execution Error", str(exc))
             return None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
+        if result.returncode:
+            self.record_error(label, "Runtime Error", result.stdout + result.stderr)
+            return None
+        return result
+
+    def _prepare(self, name, label, functions):
+        status, path = self._load_module(name, label)
+        if not status:
+            return None
+        if not self.verify_strict(
+            path, label, functions + ['str', 'int', 'float', 'list', 'dict', 'set', 'tuple'],
+            allowed_imports=['sys', 'typing'] if name != 'ft_vault_security' else [],
+        ):
+            return None
+        if name != 'ft_vault_security' and not self._enforce_no_with_before_ex3(path, label):
+            return None
+        return path
 
     def test_ancient_text(self):
-        console.print("\n[bold]Testing Exercise 0: ft_ancient_text[/bold]")
-        exercise_label = "Exercise 0"
-        status, path = self._load_module("ft_ancient_text", exercise_label)
-        if not status: return
-
-        # v3.0: uses sys.argv and may use typing.IO annotations.
-        if not self.verify_strict(
-            path,
-            exercise_label,
-            allowed_funcs=['open', 'read', 'close', 'print', 'len'],
-            allowed_imports=['sys', 'typing'],
-        ):
+        label = "Exercise 0"
+        path = self._prepare('ft_ancient_text', label, ['open', 'read', 'close', 'print', 'len'])
+        if not path:
             return
-        if not self._enforce_no_with_before_ex3(path, exercise_label):
-            return
-
-        import subprocess
-        # Test 1: File exists
-        try:
-            cmd = [sys.executable, path, "ancient_fragment.txt"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            # v3.0 Header
-            if "=== Cyber Archives Recovery ===" not in out:
-                console.print("[red]KO (Missing Header)[/red]")
-                self.record_error(exercise_label, "Output Error", "Missing '=== Cyber Archives Recovery ==='")
-                return
-            
-            if "Digital preservation protocols established 2087" in out:
-                console.print("[green]OK (Content matches)[/green]")
-            else:
-                 console.print("[red]KO (Content Mismatch)[/red]")
-                 self.record_error(exercise_label, "Output Error", f"Output does not match 'ancient_fragment.txt' content.\nGot:\n{out}")
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
-
-        # Test 2: No Arguments
-        try:
-             cmd = [sys.executable, path]
-             result = subprocess.run(cmd, capture_output=True, text=True)
-             out = result.stdout + result.stderr
-             if "Usage:" in out or "Error:" in out or "provide" in out.lower():
-                  console.print("[green]OK (No Args handled)[/green]")
-             else:
-                  console.print("[red]KO (No Args handled)[/red]")
-                  self.record_error(exercise_label, "Handling Error", "Script must handle missing argument (no filename provided).")
-        except Exception as e:
-             pass
-
-        # Test 3: File Doesn't Exist
-        # v3.0 alignment update (Issue #17, reported by koldoest26):
-        # Make exception detection robust by performing a case-insensitive check and
-        # matching "no such file" and "error" without colon.
-        try:
-             cmd = [sys.executable, path, "non_existent_file.txt"]
-             result = subprocess.run(cmd, capture_output=True, text=True)
-             out = result.stdout + result.stderr
-             out_lower = out.lower()
-             if "filenotfounderror" in out_lower or "error" in out_lower or "not found" in out_lower or "no such file" in out_lower:
-                  console.print("[green]OK (Missing file handled)[/green]")
-             else:
-                  console.print("[red]KO (Missing file handled)[/red]")
-                  self.record_error(exercise_label, "Handling Error", "Script must catch FileNotFoundError / display error.")
-        except Exception as e:
-             pass
+        with tempfile.TemporaryDirectory(prefix='germinette-archive-') as directory:
+            source = Path(directory) / 'fragment.txt'
+            content = 'Unique archive fragment 731\nSecond line\n'
+            source.write_text(content, encoding='utf-8')
+            result = self._execute(path, label, directory, [source])
+            if result and content not in result.stdout:
+                self.record_error(label, 'Read Error', 'Display the complete file contents.\n' + result.stdout)
+            for args in ([], [Path(directory) / 'missing.txt'], [Path(directory)]):
+                result = self._execute(path, label, directory, args)
+                if result and not (result.stdout + result.stderr).strip():
+                    self.record_error(label, 'Handling Error', 'Explain missing arguments and unreadable files.')
 
     def test_archive_creation(self):
-        console.print("\n[bold]Testing Exercise 1: ft_archive_creation[/bold]")
-        exercise_label = "Exercise 1"
-        status, path = self._load_module("ft_archive_creation", exercise_label)
-        if not status: return
-
-        # v3.0: append '#' at EOL and save by user-provided filename.
-        if not self.verify_strict(
-            path,
-            exercise_label,
-            allowed_funcs=['open', 'read', 'write', 'close', 'print', 'input', 'len'],
-            allowed_imports=['sys', 'typing'],
-        ):
+        label = 'Exercise 1'
+        path = self._prepare('ft_archive_creation', label,
+                             ['open', 'read', 'write', 'close', 'print', 'input', 'len'])
+        if not path:
             return
-        if not self._enforce_no_with_before_ex3(path, exercise_label):
-            return
-
-        target_file = "test_output_archive.txt"
-        if os.path.exists(target_file):
-            os.remove(target_file)
-
-        import subprocess
-        try:
-            cmd = [sys.executable, path, "ancient_fragment.txt"]
-            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout, stderr = proc.communicate(input=f"{target_file}\n")
-            out = stdout + stderr
-
-            if self.check_for_crash(out, exercise_label): return
-
-            if "=== Cyber Archives Recovery & Preservation ===" not in out:
-                 console.print("[red]KO (Missing Header)[/red]")
-                 self.record_error(
-                    exercise_label,
-                    "Output Error",
-                    "Missing '=== Cyber Archives Recovery & Preservation ==='",
-                )
-                 return
-
-            if os.path.exists(target_file):
-                with open(target_file, "r") as f:
-                    content = f.read()
-                
-                # Subject requires trailing '#' at end of each line.
-                lines = [ln for ln in content.splitlines() if ln]
-                if lines and all(ln.endswith("#") for ln in lines):
-                    console.print("[green]OK (File Created & Transformed)[/green]")
-                else:
-                    console.print("[red]KO (File Content Missing trailing '#')[/red]")
-                    self.record_error(
-                        exercise_label,
-                        "Logic Error",
-                        "File created but transformed lines do not all end with '#'.\n"
-                        f"Got:\n{content}",
-                    )
-                
-                os.remove(target_file)
-            else:
-                console.print("[red]KO (File Not Created)[/red]")
-                self.record_error(exercise_label, "Logic Error", f"Script claimed success but '{target_file}' not found.")
-
-        except Exception as e:
-             console.print(f"[red]KO (Execution Error: {e})[/red]")
+        with tempfile.TemporaryDirectory(prefix='germinette-archive-') as directory:
+            source = Path(directory) / 'fragment.txt'
+            target = Path(directory) / 'saved.txt'
+            content = 'First record\n\nFinal record'
+            source.write_text(content, encoding='utf-8')
+            target.write_text('old content that must be replaced', encoding='utf-8')
+            result = self._execute(path, label, directory, [source], str(target) + '\n')
+            expected = [line + '#' for line in content.splitlines()]
+            if result and (not target.is_file() or target.read_text().splitlines() != expected):
+                self.record_error(label, 'Transformation Error', 'Preserve every input line, append # to each, and replace the destination.')
+            target.unlink(missing_ok=True)
+            result = self._execute(path, label, directory, [source], '\n')
+            if result and any(item != source for item in Path(directory).iterdir()):
+                self.record_error(label, 'Save Error', 'An empty destination must not create a file.')
 
     def test_stream_management(self):
-        console.print("\n[bold]Testing Exercise 2: ft_stream_management[/bold]")
-        exercise_label = "Exercise 2"
-        status, path = self._load_module("ft_stream_management", exercise_label)
-        if not status: return
-
-        # v3.0: reuse Ex1 logic, sys.stdin for prompt answer, and sys.stderr for errors.
-        if not self.verify_strict(
-            path,
-            exercise_label,
-            allowed_funcs=['open', 'read', 'readline', 'write', 'flush', 'close', 'print', 'len'],
-            allowed_imports=['sys', 'typing'],
-        ):
+        label = 'Exercise 2'
+        path = self._prepare('ft_stream_management', label,
+                             ['open', 'read', 'readline', 'write', 'flush', 'close', 'print', 'len'])
+        if not path:
             return
-        if not self._enforce_no_with_before_ex3(path, exercise_label):
-            return
-
-        # Explicitly check for NO input() function
-        import ast
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                tree = ast.parse(f.read())
-            has_input = any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'input' for node in ast.walk(tree))
-            if has_input:
-                console.print("[red]KO (Forbidden Function input())[/red]")
-                self.record_error(exercise_label, "Forbidden Magic", "You must use sys.stdin directly, not the input() function.")
-                return
-        except Exception:
-            pass
-
-        import subprocess
-        input_str = "/etc/passwd\n"
-        try:
-            cmd = [sys.executable, path, "ancient_fragment.txt"]
-            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout, stderr = proc.communicate(input=input_str)
-            
-            if self.check_for_crash(stdout + stderr, exercise_label): return
-
-            if "=== Cyber Archives Recovery & Preservation ===" not in stdout:
-                 console.print("[red]KO (Missing Header)[/red]")
-                 self.record_error(
-                    exercise_label,
-                    "Output Error",
-                    "Missing '=== Cyber Archives Recovery & Preservation ==='",
-                )
-                 return
-
-            if "Digital preservation protocols established 2087" in stdout:
-                 console.print("[green]OK (Read/Transform flow)[/green]")
-            else:
-                 console.print("[red]KO (Read/Transform flow)[/red]")
-                 self.record_error(
-                    exercise_label,
-                    "Output Error",
-                    f"Expected recovered content in stdout. Got:\n{stdout}",
-                )
-
-            # Stderr must contain prefixed exception message for save failure.
-            if "[STDERR]" in stderr and "Error opening file" in stderr:
-                 console.print("[green]OK (Stderr Prefix + Routing)[/green]")
-            else:
-                 console.print("[red]KO (Stderr Prefix + Routing)[/red]")
-                 self.record_error(
-                    exercise_label,
-                    "Output Error",
-                    "Expected error lines in sys.stderr with '[STDERR]' prefix.\n"
-                    f"stdout:\n{stdout}\n\nstderr:\n{stderr}",
-                )
-
-        except Exception as e:
-             console.print(f"[red]KO ({e})[/red]")
+        with tempfile.TemporaryDirectory(prefix='germinette-stream-') as directory:
+            source = Path(directory) / 'fragment.txt'
+            source.write_text('Stream payload\n', encoding='utf-8')
+            # A directory is an unwritable file target regardless of user privileges.
+            result = self._execute(path, label, directory, [source], directory + '\n')
+            if result and ('[STDERR]' not in result.stderr or not result.stderr.strip()):
+                self.record_error(label, 'Stream Error', 'Send prefixed save errors to stderr.')
+            result = self._execute(path, label, directory, [Path(directory) / 'missing'], '\n')
+            if result and ('[STDERR]' not in result.stderr or '[STDERR]' in result.stdout):
+                self.record_error(label, 'Stream Error', 'Send prefixed read errors to stderr, not stdout.')
+            target = Path(directory) / 'saved.txt'
+            result = self._execute(path, label, directory, [source], str(target) + '\n')
+            if result and (not target.is_file() or target.read_text().splitlines() != ['Stream payload#']):
+                self.record_error(label, 'Stream Error', 'Read a destination from stdin and save transformed data.')
 
     def test_vault_security(self):
-        console.print("\n[bold]Testing Exercise 3: ft_vault_security[/bold]")
-        exercise_label = "Exercise 3"
-        status, path = self._load_module("ft_vault_security", exercise_label)
-        if not status: return
-
-        if not self.verify_strict(path, exercise_label, allowed_funcs=['open', 'read', 'write', 'print', 'len', 'tuple']):
+        label = 'Exercise 3'
+        path = self._prepare('ft_vault_security', label, ['open', 'read', 'write', 'print'])
+        if not path:
             return
-
-        # Check for `with`
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                tree = ast.parse(f.read())
-            has_with = any(isinstance(node, ast.With) for node in ast.walk(tree))
-            if has_with:
-                console.print("[green]OK (Uses 'with')[/green]")
-            else:
-                console.print("[red]KO (Missing 'with')[/red]")
-                self.record_error(exercise_label, "Structure Error", "Must use 'with' statement for file operations.")
-                return
-        except Exception:
-            pass
-
-        import subprocess
-        try:
-            cmd = [sys.executable, path]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            out = result.stdout + result.stderr
-            if self.check_for_crash(out, exercise_label): return
-
-            if "=== Cyber Archives Security ===" not in out:
-                 console.print("[red]KO (Header)[/red]")
-                 self.record_error(
-                    exercise_label,
-                    "Output Error",
-                    "Missing '=== Cyber Archives Security ==='",
-                )
-                 return
-
-            module = self._load_module_object(path)
-            fn = getattr(module, "secure_archive", None) if module else None
-            if fn is None:
-                self.record_error(
-                    exercise_label,
-                    "Structure Error",
-                    "Missing required function: secure_archive(...)",
-                )
-                return
-
-            read_ok = fn("ancient_fragment.txt")
-            if not isinstance(read_ok, tuple) or len(read_ok) != 2:
-                self.record_error(
-                    exercise_label,
-                    "Logic Error",
-                    "secure_archive() must return a tuple(bool, str).",
-                )
-                return
-            if not isinstance(read_ok[0], bool) or not isinstance(read_ok[1], str):
-                self.record_error(
-                    exercise_label,
-                    "Logic Error",
-                    "secure_archive() tuple must be (bool, str).",
-                )
-                return
-
-            miss = fn("/not/existing/file")
-            if not isinstance(miss, tuple) or len(miss) != 2 or miss[0] is not False:
-                self.record_error(
-                    exercise_label,
-                    "Logic Error",
-                    "Reading a nonexistent file should return (False, <error message>).",
-                )
-                return
-
-            write_path = "vault_security_test_output.txt"
-            try:
-                write_ok = fn(write_path, "write", "vault payload")
-                if not isinstance(write_ok, tuple) or len(write_ok) != 2 or write_ok[0] is not True:
-                    self.record_error(
-                        exercise_label,
-                        "Logic Error",
-                        "Writing via secure_archive should return (True, <message>).",
-                    )
-                    return
-                if not os.path.exists(write_path):
-                    self.record_error(
-                        exercise_label,
-                        "Logic Error",
-                        "Write operation returned success but output file was not created.",
-                    )
-                    return
-            finally:
-                if os.path.exists(write_path):
-                    os.remove(write_path)
-
-            console.print("[green]OK (secure_archive contract)[/green]")
-
-        except Exception as e:
-             console.print(f"[red]KO ({e})[/red]")
+        tree = ast.parse(Path(path).read_text(encoding='utf-8'))
+        fn = next((node for node in tree.body if isinstance(node, ast.FunctionDef)
+                   and node.name == 'secure_archive'), None)
+        if fn is None or not any(isinstance(node, ast.With) for node in ast.walk(fn)):
+            self.record_error(label, 'Structure Error', 'secure_archive() must use with for file operations.')
+            return
+        with tempfile.TemporaryDirectory(prefix='germinette-vault-') as directory:
+            self.check_behavior(label, """
+import ast
+import inspect
+import runpy
+from pathlib import Path
+fn = runpy.run_path(PATH)['secure_archive']
+parameters = list(inspect.signature(fn).parameters.values())
+assert len(parameters) == 3, 'Expected file, optional action and optional content'
+assert all(p.default is not inspect.Parameter.empty for p in parameters[1:])
+source = Path('fragment.txt')
+source.write_text('Vault payload\\nSecond line', encoding='utf-8')
+assert fn(str(source)) == (True, source.read_text()), 'Read success must contain the full file'
+missing = fn('missing.txt')
+assert isinstance(missing, tuple) and len(missing) == 2
+assert missing[0] is False and isinstance(missing[1], str) and missing[1]
+action = parameters[1]
+assert type(action.default) in (int, str), 'The action may be an int or str'
+candidates = ['write', 'w', 0, 1, 2]
+for node in ast.walk(ast.parse(inspect.getsource(fn))):
+    if isinstance(node, ast.Compare) and any(isinstance(part, ast.Name)
+            and part.id == action.name for part in (node.left, *node.comparators)):
+        candidates.extend(part.value for part in (node.left, *node.comparators)
+                          if isinstance(part, ast.Constant))
+for mode in candidates:
+    if type(mode) is not type(action.default):
+        continue
+    target = Path('written.txt')
+    target.unlink(missing_ok=True)
+    result = fn(str(target), mode, 'written payload')
+    if (isinstance(result, tuple) and len(result) == 2 and result[0] is True
+            and isinstance(result[1], str) and target.is_file()
+            and target.read_text() == 'written payload'):
+        failed = fn('.', mode, 'cannot write a directory')
+        assert isinstance(failed, tuple) and len(failed) == 2
+        assert failed[0] is False and isinstance(failed[1], str) and failed[1]
+        break
+else:
+    raise AssertionError('Writing must save the supplied content and return (True, str)')
+""".replace('PATH', repr(path)), cwd=directory)

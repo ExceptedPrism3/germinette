@@ -83,7 +83,13 @@ class Tester(BaseTester):
             sys.modules[module_name] = mod
             spec.loader.exec_module(mod)
 
-            style_errors = self.check_flake8(found_path)
+            tree = self._parse_tree(found_path)
+            operation = self._func_node(tree, "garden_operations")
+            expected = [
+                (node.lineno, "operator") for node in ast.walk(operation)
+                if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add)
+            ] if module_name == "ft_different_errors" and operation else []
+            style_errors = self.check_flake8(found_path, expected_mypy_errors=expected)
             if style_errors:
                 console.print("[red]KO[/red]")
                 self.record_error(exercise_label, "Style Error (Flake8)", style_errors)
@@ -230,7 +236,7 @@ class Tester(BaseTester):
         # Invalid: non-numeric
         try:
             func("abc")
-            console.print("[green]OK ('abc' — Handled)[/green]")
+            self.record_error(exercise_label, "Missing Raise", "Invalid input must raise an exception.")
         except ValueError:
             console.print("[green]OK ('abc' — Raised ValueError)[/green]")
         except Exception as e:
@@ -263,6 +269,7 @@ class Tester(BaseTester):
                     console.print(f"[green]OK (Boundary: {boundary}°C)[/green]")
                 else:
                     console.print(f"[red]KO (Boundary: {boundary}°C)[/red]")
+                    self.record_error(exercise_label, "Boundary Error", f"Expected {boundary}, got {ret!r}.")
             except Exception:
                 console.print(f"[red]KO (Boundary: {boundary}°C — should be valid)[/red]")
                 self.record_error(exercise_label, "Boundary Error",
@@ -347,8 +354,7 @@ class Tester(BaseTester):
         for op_num, expected_error in expected_errors.items():
             try:
                 mod.garden_operations(op_num)
-                # If it doesn't raise, it should be caught internally — check output
-                console.print(f"[green]OK (op {op_num} — Handled)[/green]")
+                self.record_error(exercise_label, "Missing Raise", f"garden_operations({op_num}) must raise {expected_error}; catch it in test_error_types().")
             except Exception as e:
                 # The function may intentionally raise, which is fine
                 if type(e).__name__ == expected_error:
@@ -426,15 +432,16 @@ class Tester(BaseTester):
 
             console.print("[green]OK (Classes Valid)[/green]")
 
-            # v3.0: Check default messages
-            try:
-                pe = PlantError()
-                if "plant" in str(pe).lower() or "unknown" in str(pe).lower():
-                    console.print("[green]OK (Default Message: PlantError)[/green]")
-                else:
-                    console.print("[yellow]Warning: PlantError default message may not match v3.0[/yellow]")
-            except TypeError:
-                pass  # May require args
+            for cls in (GardenError, PlantError, WaterError):
+                try:
+                    default = cls()
+                except TypeError:
+                    self.record_error(exercise_label, "Default Message", f"{cls.__name__} must be constructible without a message.")
+                    continue
+                if not str(default).strip():
+                    self.record_error(exercise_label, "Default Message", f"{cls.__name__} needs a default error message.")
+                if str(cls("custom message")) != "custom message":
+                    self.record_error(exercise_label, "Custom Message", f"{cls.__name__} must preserve an explicit message.")
 
         except Exception as e:
             console.print("[red]KO[/red]")
@@ -452,7 +459,7 @@ class Tester(BaseTester):
             if "catching all garden errors" in output.lower() or "GardenError" in output:
                 console.print("[green]OK (Script Execution)[/green]")
             else:
-                console.print("[green]OK (Script Execution — partial)[/green]")
+                self.record_error(exercise_label, "Script Output", "Demonstrate catching PlantError and WaterError with GardenError.")
         else:
             console.print("[red]KO (Script Execution)[/red]")
             self.record_error(exercise_label, "Script Output",
@@ -470,16 +477,23 @@ class Tester(BaseTester):
             return
 
         # v3.0: water_plant(plant_name) — singular, not water_plants(list)
-        if not hasattr(mod, "water_plant"):
-            # Fallback: accept old name water_plants
-            if hasattr(mod, "water_plants"):
-                console.print("[yellow]Warning: Found 'water_plants' — v3.0 expects 'water_plant(plant_name)'[/yellow]")
-            else:
-                self.record_error(exercise_label, "Missing Function",
-                                  "water_plant(plant_name) not found.\n"
-                                  "v3.0 requires this function (singular, takes a plant name string).")
-                console.print("[red]KO (Missing water_plant)[/red]")
-                return
+        if not callable(getattr(mod, "water_plant", None)):
+            self.record_error(exercise_label, "Missing Function", "water_plant(plant_name) is required.")
+            return
+        try:
+            success = IOTester.run_function(mod.water_plant, args=("Tomato",))
+            if not success.strip():
+                self.record_error(exercise_label, "Watering Error", "Successful watering must print a message.")
+        except Exception as exc:
+            self.record_error(exercise_label, "Watering Error", f"A valid capitalized name must succeed: {exc}")
+        try:
+            mod.water_plant("lettuce")
+        except Exception as exc:
+            plant_error = getattr(mod, "PlantError", None)
+            if not isinstance(plant_error, type) or not isinstance(exc, plant_error):
+                self.record_error(exercise_label, "Wrong Error", "Invalid names must raise PlantError.")
+        else:
+            self.record_error(exercise_label, "Missing Raise", "Lowercase plant names must raise PlantError.")
 
         if not hasattr(mod, "test_watering_system"):
             self.record_error(exercise_label, "Missing Test Function",
@@ -490,41 +504,15 @@ class Tester(BaseTester):
         tree = self._parse_tree(path)
         test_func = self._func_node(tree, "test_watering_system")
         if test_func:
-            # Subject strictness: one global try/except/finally.
-            top_level_tries = [n for n in test_func.body if isinstance(n, ast.Try)]
-            if len(top_level_tries) != 1:
-                console.print("[red]KO (Control Flow)[/red]")
-                self.record_error(
-                    exercise_label,
-                    "Structure Error",
-                    "test_watering_system() must use one global try/except/finally block.",
-                )
+            cleanup_blocks = [node for node in ast.walk(test_func)
+                              if isinstance(node, ast.Try) and node.handlers and node.finalbody]
+            if not cleanup_blocks:
+                self.record_error(exercise_label, "Structure Error", "Use try/except/finally to close the watering system.")
                 return
-            # Not try/except inside loop.
-            for n in ast.walk(test_func):
-                if isinstance(n, (ast.For, ast.While)) and any(
-                    isinstance(sub, ast.Try) for sub in ast.walk(n)
-                ):
-                    console.print("[red]KO (try in loop)[/red]")
-                    self.record_error(
-                        exercise_label,
-                        "Structure Error",
-                        "Do not place try/except/finally inside a loop for this exercise.",
-                    )
-                    return
-            # Must return immediately on error path.
-            has_return_in_except = any(
-                isinstance(sub, ast.Return)
-                for h in top_level_tries[0].handlers
-                for sub in ast.walk(h)
-            )
-            if not has_return_in_except:
-                console.print("[red]KO (No immediate return on error)[/red]")
-                self.record_error(
-                    exercise_label,
-                    "Control Flow Error",
-                    "On invalid plant, test must stop and return to main from except block.",
-                )
+            if not any(isinstance(node, ast.Return)
+                       for block in cleanup_blocks for handler in block.handlers
+                       for node in ast.walk(handler)):
+                self.record_error(exercise_label, "Control Flow Error", "Stop and return from the error handler, while finally performs cleanup.")
                 return
 
         # Script execution — v3.0 specific output
@@ -552,7 +540,7 @@ class Tester(BaseTester):
         if has_ok and has_error:
             console.print("[green]OK (Script Execution)[/green]")
         elif has_ok:
-            console.print("[yellow]OK (Valid plants work, but no error case shown)[/yellow]")
+            self.record_error(exercise_label, "Script Output", "Show the invalid plant error as well as successful watering.")
         else:
             console.print("[red]KO (Script Execution)[/red]")
             self.record_error(exercise_label, "Script Output",

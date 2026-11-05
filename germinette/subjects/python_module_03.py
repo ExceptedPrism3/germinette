@@ -1,6 +1,9 @@
 import sys
 import os
 import importlib.util
+import ast
+import re
+import subprocess
 from rich.console import Console
 from rich.panel import Panel
 from germinette.core import BaseTester
@@ -11,7 +14,7 @@ console = Console()
 class Tester(BaseTester):
     def __init__(self):
         super().__init__()
-        self.title = "[bold purple]Testing Module 03: Data Quest (v3.0)[/bold purple]"
+        self.title = "[bold purple]Testing Module 03: Data Quest (v3.1)[/bold purple]"
         # v3.0 alignment update (Issue #16, reported by Ketaminepunch):
         # Allow standard types (str, int, float) globally across all exercises.
         self.exercises = [
@@ -133,59 +136,47 @@ class Tester(BaseTester):
             console.print("[red]KO (No Scores)[/red]")
             self.record_error(exercise_label, "Handling Error", "Should handle empty input gracefully.")
 
+        mixed = self._run_script_args(path, ["10", "bad", "20"])
+        if self.check_for_crash(mixed, exercise_label):
+            return
+        if not all(marker in mixed for marker in ("bad", "Total players: 2", "Total score: 30", "Average score: 15")):
+            self.record_error(exercise_label, "Mixed Scores", "Discard invalid scores and compute statistics from the valid ones.\n" + mixed)
+        invalid = self._run_script_args(path, ["ab", "ac"])
+        if self.check_for_crash(invalid, exercise_label):
+            return
+        if not all(marker in invalid for marker in ("ab", "ac", "No scores provided")):
+            self.record_error(exercise_label, "Invalid Scores", "Report each invalid score and handle the empty result.\n" + invalid)
+
     def test_coordinate_system(self):
-        console.print("\n[bold]Testing Exercise 2: ft_coordinate_system[/bold]")
-        exercise_label = "Exercise 2"
-        status, path = self._load_module("ft_coordinate_system", exercise_label)
-        if not status: return
-
-        # v3.0 authorized: import math, math.sqrt(), input(), round(), print()
-        if not self.verify_strict(path, exercise_label, 
-                                  ["tuple", "float", "round", "print", "input", "str", "int"], 
-                                  allowed_imports=["math"],
-                                  enforce_try_except=True): return
-
-        import subprocess
-        # Test Case 1: Valid
-        try:
-             cmd = [sys.executable, path]
-             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-             stdout, stderr = proc.communicate(input="3,4,0\n4,5,6\n")
-             out = stdout + stderr
-
-             if self.check_for_crash(out, exercise_label): return
-
-             if "=== Game Coordinate System ===" not in out:
-                  console.print("[red]KO (Missing Header)[/red]")
-                  self.record_error(exercise_label, "Output Error", "Missing '=== Game Coordinate System ==='")
-                  return
-             
-             # distance of (3,4,0) to origin is 5.0
-             if "5.0" in out or "5.00" in out or "Distance to center:" in out:
-                  console.print("[green]OK (Calculation)[/green]")
-             else:
-                  console.print("[red]KO (Calculation)[/red]")
-                  self.record_error(exercise_label, "Math Error", f"Distance calculation incorrect. Got:\n{out}")
-
-        except Exception as e:
-             console.print(f"[red]KO (Execution: {e})[/red]")
-
-        # Test Case 2: Invalid (requires try/except handling)
-        try:
-             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-             stdout, stderr = proc.communicate(input="3,abc,0\n3,4,0\n4,5,6\n")
-             out = stdout + stderr
-
-             # Should not crash unhandled, should show error message
-             if self.check_for_crash(out, exercise_label): return
-             
-             if "ValueError" in out or "error" in out.lower() or "invalid" in out.lower():
-                  console.print("[green]OK (Error Handling)[/green]")
-             else:
-                  console.print("[red]KO (Error Handling)[/red]")
-                  self.record_error(exercise_label, "Handling Error", f"Expected error handling output. Got:\n{out}")
-        except Exception as e:
-             console.print(f"[red]KO (Execution: {e})[/red]")
+        label = "Exercise 2"
+        status, path = self._load_module("ft_coordinate_system", label)
+        if not status:
+            return
+        if not self.verify_strict(
+            path, label, ["tuple", "float", "round", "print", "input", "str", "int"],
+            allowed_imports=["math"], enforce_try_except=True,
+        ):
+            return
+        for inputs in ("3,4,0\n4,5,6\n", "bad syntax\n3,abc,0\n3,4,0\n4,5,6\n"):
+            out = self._run_script_args(path, [], input_text=inputs)
+            if self.check_for_crash(out, label):
+                return
+            center = re.search(r"Distance to center:\s*([0-9.]+)", out)
+            distance = re.search(r"Distance between[^:\n]*:\s*([0-9.]+)", out)
+            if not center or abs(float(center[1]) - 5) > 0.0001:
+                self.record_error(label, "Math Error", "Expected distance to center 5.0.\n" + out)
+            if not distance or abs(float(distance[1]) - (38 ** 0.5)) > 0.0001:
+                self.record_error(label, "Math Error", "Expected distance between positions 6.1644.\n" + out)
+        self.check_behavior(label, """
+import itertools
+import runpy
+from unittest.mock import patch
+with patch("builtins.input", side_effect=itertools.repeat("0,0,0")):
+    namespace = runpy.run_path(PATH)
+with patch("builtins.input", side_effect=["wrong", "1,no,3", "1.5, 2,3"]):
+    result = namespace["get_player_pos"]()
+assert isinstance(result, tuple) and result == (1.5, 2.0, 3.0)
+""".replace("PATH", repr(path)))
 
     def test_achievement_tracker(self):
         console.print("\n[bold]Testing Exercise 3: ft_achievement_tracker[/bold]")
@@ -213,32 +204,20 @@ class Tester(BaseTester):
             )
             return
 
-        required_lines: list[str] = [
-            "Player Alice:",
-            "Player Bob:",
-            "Player Charlie:",
-            "Player Dylan:",
-            "All distinct achievements:",
-            "Common achievements:",
-            "Only Alice has:",
-            "Only Bob has:",
-            "Only Charlie has:",
-            "Only Dylan has:",
-            "Alice is missing:",
-            "Bob is missing:",
-            "Charlie is missing:",
-            "Dylan is missing:",
-        ]
-        missing = [s for s in required_lines if s not in out]
-        if not missing:
-            console.print("[green]OK (Set Operations v3.0)[/green]")
-        else:
-            console.print("[red]KO (Set Operations v3.0)[/red]")
-            self.record_error(
-                exercise_label,
-                "Logic Error",
-                f"Missing v3.0 output markers: {missing!r}.\nGot:\n{out}",
-            )
+        players = re.findall(r"^Player (.+?):", out, re.MULTILINE)
+        if len(set(players)) < 4:
+            self.record_error(exercise_label, "Player Count", "Generate achievements for at least four different players.")
+            return
+        required = ["All distinct achievements:", "Common achievements:"]
+        for player in players:
+            required.extend([f"Only {player} has:", f"{player} is missing:"])
+        missing = [marker for marker in required if marker not in out]
+        if missing:
+            self.record_error(exercise_label, "Set Operations", f"Missing achievement reports: {missing}")
+        self.check_behavior(exercise_label,
+            "import runpy\nns = runpy.run_path(" + repr(path) + ")\n"
+            "result = ns['gen_player_achievements']()\n"
+            "assert isinstance(result, set), 'Return a set of random achievements'\n")
 
     def test_inventory_system(self):
         console.print("\n[bold]Testing Exercise 4: ft_inventory_system[/bold]")
@@ -297,11 +276,32 @@ class Tester(BaseTester):
                                   allowed_imports=["sys", "typing", "random"]):
              return
 
+        self.check_behavior(exercise_label, """
+import inspect
+import runpy
+ns = runpy.run_path(PATH)
+assert inspect.isgeneratorfunction(ns['gen_event'])
+assert inspect.isgeneratorfunction(ns['consume_event'])
+stream = ns['gen_event']()
+for _ in range(1001):
+    event = next(stream)
+    assert isinstance(event, tuple) and len(event) == 2
+    assert all(isinstance(part, str) for part in event)
+events = [('one', 'run'), ('two', 'eat'), ('one', 'run')]
+remaining = events.copy()
+consumed = []
+for event in ns['consume_event'](remaining):
+    consumed.append(event)
+    assert len(remaining) == len(events) - len(consumed)
+assert not remaining and sorted(consumed) == sorted(events)
+""".replace("PATH", repr(path)))
+
         out = self._run_script_args(path, [])
         if self.check_for_crash(out, exercise_label): return
         
         if "=== Game Data Stream Processor ===" not in out:
              console.print("[red]KO (Missing Header)[/red]")
+             self.record_error(exercise_label, "Output Error", "Missing game stream header.")
              return
 
         # v3.0 alignment update (Issue #13, reported by koldoest26):
@@ -337,11 +337,6 @@ class Tester(BaseTester):
              self.record_error(exercise_label, "Output Error", "Missing '=== Game Data Alchemist ==='")
              return
         
-        # Check for comprehension examples usage in output (rough proxy for now)
-        required_hints = [
-            "List comp", "Dict comp", "Set comp", "Filtered"
-        ]
-        
         # Not requiring exact section headers, just signs of list/dict/set operations.
         # Let's inspect the AST for comprehensions instead to be sure.
         import ast
@@ -349,8 +344,8 @@ class Tester(BaseTester):
              with open(path, "r", encoding="utf-8") as f:
                   tree = ast.parse(f.read())
              
-             has_list_comp = any(isinstance(n, ast.ListComp) for n in ast.walk(tree))
-             has_dict_comp = any(isinstance(n, ast.DictComp) for n in ast.walk(tree))
+             has_list_comp = sum(isinstance(n, ast.ListComp) for n in ast.walk(tree)) >= 2
+             has_dict_comp = sum(isinstance(n, ast.DictComp) for n in ast.walk(tree)) >= 2
              has_set_comp = any(isinstance(n, ast.SetComp) for n in ast.walk(tree))
              
              # Subject requires list + dict comprehensions; set comprehensions are optional.
@@ -358,19 +353,23 @@ class Tester(BaseTester):
                   console.print("[green]OK (Comprehensions verified in AST)[/green]")
              else:
                   console.print("[red]KO (Missing Comprehensions)[/red]")
-                  self.record_error(exercise_label, "Structure Error", f"Script must use list and dict comprehensions.\nListComp: {has_list_comp}, DictComp: {has_dict_comp}, SetComp(optional): {has_set_comp}")
+                  self.record_error(exercise_label, "Structure Error", f"Script must use two list and two dict comprehensions.\nListComp: {has_list_comp}, DictComp: {has_dict_comp}, SetComp(optional): {has_set_comp}")
         except Exception as e:
              console.print(f"[red]KO (AST Error: {e})[/red]")
+             self.record_error(exercise_label, "AST Error", str(e))
 
-    def _run_script_args(self, path, args):
+    def _run_script_args(self, path, args, *, input_text=None):
         import subprocess
         try:
             cmd = [sys.executable, path] + args
             result = subprocess.run(
                 cmd,
                 capture_output=True,
-                text=True
+                text=True, input=input_text, timeout=15,
             )
-            return result.stdout + result.stderr
-        except Exception as e:
-            return str(e)
+            output = result.stdout + result.stderr
+            if result.returncode:
+                return "Traceback (most recent call last):\n" + output
+            return output
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return "Traceback (most recent call last):\n" + str(e)

@@ -1,44 +1,48 @@
-"""Creature classes."""
+"""Two creature families with descriptions supplied by their shared base."""
 
-import abc
+from abc import ABC, abstractmethod
 
 
-class Creature(abc.ABC):
-    """Abstract creature."""
+class Creature(ABC):
+    def __init__(self, name: str = 'Creature', kind: str = 'Normal') -> None:
+        self.name = name
+        self.kind = kind
 
-    @abc.abstractmethod
+    @abstractmethod
     def attack(self) -> str:
-        """Abstract attack."""
         pass
 
     def describe(self) -> str:
-        """Base description."""
-        return "I am a Creature"
+        return f'{self.name} is a {self.kind} type Creature'
 
 
 class Flameling(Creature):
-    """Flameling."""
+    def __init__(self) -> None:
+        super().__init__('Flameling', 'Fire')
 
     def attack(self) -> str:
-        return "Flameling uses Ember!"
+        return 'Flameling uses Ember!'
 
 
 class Pyrodon(Creature):
-    """Pyrodon."""
+    def __init__(self) -> None:
+        super().__init__('Pyrodon', 'Fire/Flying')
 
     def attack(self) -> str:
-        return "Pyrodon uses Flamethrower!"
+        return 'Pyrodon uses Flamethrower!'
 
 
 class Aquabub(Creature):
-    """Aquabub."""
+    def __init__(self) -> None:
+        super().__init__('Aquabub', 'Water')
 
     def attack(self) -> str:
-        return "Aquabub uses Water Gun!"
+        return 'Aquabub uses Water Gun!'
 
 
 class Torragon(Creature):
-    """Torragon."""
+    def __init__(self) -> None:
+        super().__init__('Torragon', 'Water')
 
     def attack(self) -> str:
-        return "Torragon uses Hydro Pump!"
+        return 'Torragon uses Hydro Pump!'
